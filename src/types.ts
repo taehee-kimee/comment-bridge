@@ -92,7 +92,7 @@ export type PluginMessage =
 // ── Messages: Plugin → UI ────────────────────────────────────────────
 
 export type UIMessage =
-  | { type: "init"; fileKey: string | undefined; savedToken: string }
+  | { type: "init"; fileKey: string | undefined; savedToken: string; savedExport: string | null }
   | {
       type: "import-complete";
       placed: number;

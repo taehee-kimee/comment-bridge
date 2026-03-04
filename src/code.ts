@@ -41,12 +41,15 @@ figma.showUI(__html__, { width: 440, height: 560, themeColors: true });
 
 // Send init data to UI
 (async () => {
-  const savedToken =
-    (await figma.clientStorage.getAsync(TOKEN_STORAGE_KEY)) ?? "";
+  const [savedToken, savedExport] = await Promise.all([
+    figma.clientStorage.getAsync(TOKEN_STORAGE_KEY),
+    figma.clientStorage.getAsync(EXPORT_DATA_KEY),
+  ]);
   sendToUI({
     type: "init",
     fileKey: figma.fileKey,
-    savedToken: String(savedToken),
+    savedToken: String(savedToken ?? ""),
+    savedExport: (savedExport as string) ?? null,
   });
 })();
 

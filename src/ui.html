@@ -500,6 +500,10 @@
         if (msg.savedToken) {
           tokenInput.value = msg.savedToken;
         }
+        if (msg.savedExport) {
+          document.getElementById("jsonInput").value = msg.savedExport;
+          showStatus(importStatus, "success", "브랜치 export가 감지되었습니다. Import 버튼을 눌러 적용하세요.");
+        }
         break;
 
       case "filekey-response":
