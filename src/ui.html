@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f5f5f5;
+    --border: #e0e0e0;
+    --text: #333333;
+    --text-secondary: #777777;
+    --primary: #5b5bf7;
+    --primary-hover: #4a4ae0;
+    --success: #2e9e5a;
+    --error: #d94444;
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    padding: 20px;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-bottom: 20px;
+  }
+
+  .section {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .file-drop {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    color: var(--text-secondary);
+    font-size: 13px;
+    position: relative;
+  }
+
+  .file-drop:hover,
+  .file-drop.dragover {
+    border-color: var(--primary);
+    background: rgba(91, 91, 247, 0.04);
+  }
+
+  .file-drop input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .file-drop .file-name {
+    color: var(--primary);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .divider::before,
+  .divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  textarea {
+    width: 100%;
+    height: 140px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    color: var(--text);
+    background: var(--surface);
+  }
+
+  textarea:focus {
+    border-color: var(--primary);
+  }
+
+  textarea::placeholder {
+    color: #aaa;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-hover);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .status {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    display: none;
+  }
+
+  .status.success {
+    display: block;
+    background: rgba(46, 158, 90, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(46, 158, 90, 0.2);
+  }
+
+  .status.error {
+    display: block;
+    background: rgba(217, 68, 68, 0.08);
+    color: var(--error);
+    border: 1px solid rgba(217, 68, 68, 0.15);
+  }
+
+  .info {
+    margin-top: 16px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .info summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .info pre {
+    margin-top: 8px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 10px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+</style>
+</head>
+<body>
+
+<h1>Comment Bridge</h1>
+<p class="subtitle">Import branch comments as post-it annotations</p>
+
+<!-- File upload -->
+<div class="section">
+  <label>Upload JSON file</label>
+  <div class="file-drop" id="fileDrop">
+    <span id="fileLabel">Click or drag & drop a .json file</span>
+    <input type="file" accept=".json" id="fileInput" />
+  </div>
+</div>
+
+<div class="divider">or</div>
+
+<!-- Paste JSON -->
+<div class="section">
+  <label>Paste JSON</label>
+  <textarea id="jsonInput" placeholder='[{ "id": "1", "author": "...", "message": "...", "position": { ... } }]'></textarea>
+</div>
+
+<button class="btn btn-primary" id="importBtn">Import Comments</button>
+
+<div class="status" id="status"></div>
+
+<details class="info">
+  <summary>JSON format reference</summary>
+  <pre>[
+  {
+    "id": "c1",
+    "author": "Designer A",
+    "message": "Button color needs update",
+    "createdAt": "2025-01-15",
+    "resolved": false,
+    "replies": [
+      {
+        "id": "r1",
+        "author": "Developer B",
+        "message": "Fixed in latest push",
+        "createdAt": "2025-01-16"
+      }
+    ],
+    "position": {
+      "frameName": "Login Screen",
+      "absoluteX": 400,
+      "absoluteY": 300,
+      "relativeX": 120,
+      "relativeY": 80
+    }
+  }
+]</pre>
+</details>
+
+<script>
+  const fileInput = document.getElementById("fileInput");
+  const fileDrop = document.getElementById("fileDrop");
+  const fileLabel = document.getElementById("fileLabel");
+  const jsonInput = document.getElementById("jsonInput");
+  const importBtn = document.getElementById("importBtn");
+  const statusEl = document.getElementById("status");
+
+  let fileData = null;
+
+  // ── File handling ──
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) readFile(file);
+  });
+
+  fileDrop.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    fileDrop.classList.add("dragover");
+  });
+
+  fileDrop.addEventListener("dragleave", () => {
+    fileDrop.classList.remove("dragover");
+  });
+
+  fileDrop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    fileDrop.classList.remove("dragover");
+    const file = e.dataTransfer.files[0];
+    if (file) readFile(file);
+  });
+
+  function readFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      fileData = reader.result;
+      fileLabel.innerHTML = '<span class="file-name">' + file.name + "</span>";
+      jsonInput.value = "";
+    };
+    reader.readAsText(file);
+  }
+
+  // When user types in textarea, clear file selection
+  jsonInput.addEventListener("input", () => {
+    if (jsonInput.value.trim()) {
+      fileData = null;
+      fileLabel.textContent = "Click or drag & drop a .json file";
+      fileInput.value = "";
+    }
+  });
+
+  // ── Import ──
+  importBtn.addEventListener("click", () => {
+    const raw = fileData || jsonInput.value.trim();
+
+    if (!raw) {
+      showStatus("error", "Please upload a file or paste JSON.");
+      return;
+    }
+
+    let comments;
+    try {
+      comments = JSON.parse(raw);
+    } catch (e) {
+      showStatus("error", "Invalid JSON: " + e.message);
+      return;
+    }
+
+    if (!Array.isArray(comments)) {
+      showStatus("error", "JSON must be an array of comment objects.");
+      return;
+    }
+
+    // Basic validation
+    const errors = [];
+    comments.forEach((c, i) => {
+      if (!c.id) errors.push("Comment #" + (i + 1) + ": missing 'id'");
+      if (!c.message) errors.push("Comment #" + (i + 1) + ": missing 'message'");
+      if (!c.author) errors.push("Comment #" + (i + 1) + ": missing 'author'");
+      if (!c.position) errors.push("Comment #" + (i + 1) + ": missing 'position'");
+    });
+
+    if (errors.length > 0) {
+      showStatus("error", errors.slice(0, 5).join("\n") +
+        (errors.length > 5 ? "\n... and " + (errors.length - 5) + " more" : ""));
+      return;
+    }
+
+    importBtn.disabled = true;
+    importBtn.textContent = "Importing…";
+    showStatus("", "");
+
+    parent.postMessage({ pluginMessage: { type: "import-comments", comments } }, "*");
+  });
+
+  // ── Messages from plugin ──
+  window.onmessage = (event) => {
+    const msg = event.data.pluginMessage;
+    if (!msg) return;
+
+    importBtn.disabled = false;
+    importBtn.textContent = "Import Comments";
+
+    if (msg.type === "import-complete") {
+      showStatus("success", "Successfully imported " + msg.count + " comment(s) as annotations!");
+    } else if (msg.type === "import-error") {
+      showStatus("error", "Error: " + msg.error);
+    }
+  };
+
+  function showStatus(type, text) {
+    statusEl.className = "status" + (type ? " " + type : "");
+    statusEl.textContent = text;
+  }
+</script>
+
+</body>
+</html>

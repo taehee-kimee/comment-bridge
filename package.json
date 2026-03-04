@@ -1,0 +1,14 @@
+{
+  "name": "comment-bridge",
+  "version": "0.1.0",
+  "description": "Figma plugin to import branch comments as post-it annotations",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.100.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}
