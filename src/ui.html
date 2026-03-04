@@ -399,7 +399,6 @@
         fileKey = msg.fileKey ?? null;
         if (fileKey) {
           fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
-          // Only start export if this was triggered by export button click
           if (exportBtn.disabled) {
             startExportFetch();
           }
