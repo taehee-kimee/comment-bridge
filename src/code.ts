@@ -82,6 +82,13 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
     case "save-token":
       await figma.clientStorage.setAsync(TOKEN_STORAGE_KEY, msg.token);
       break;
+
+    case "request-filekey":
+      sendToUI({
+        type: "filekey-response",
+        fileKey: figma.fileKey,
+      });
+      break;
   }
 };
 

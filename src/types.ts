@@ -84,7 +84,8 @@ export interface ExportPayload {
 export type PluginMessage =
   | { type: "import-comments"; payload: ImportPayload }
   | { type: "process-export"; rawComments: FigmaAPIComment[]; includeResolved: boolean }
-  | { type: "save-token"; token: string };
+  | { type: "save-token"; token: string }
+  | { type: "request-filekey" };
 
 // ── Messages: Plugin → UI ────────────────────────────────────────────
 
@@ -99,4 +100,5 @@ export type UIMessage =
     }
   | { type: "import-error"; error: string }
   | { type: "export-ready"; json: string; filename: string }
-  | { type: "export-error"; error: string };
+  | { type: "export-error"; error: string }
+  | { type: "filekey-response"; fileKey: string | undefined };
