@@ -387,7 +387,8 @@
         if (fileKey) {
           fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
         } else {
-          fileKeyDisplay.innerHTML = "File key: <code style='color:var(--error)'>unavailable</code>";
+          // fileKey not ready yet at init — request a fresh one
+          parent.postMessage({ pluginMessage: { type: "request-filekey" } }, "*");
         }
         if (msg.savedToken) {
           tokenInput.value = msg.savedToken;
@@ -398,11 +399,16 @@
         fileKey = msg.fileKey ?? null;
         if (fileKey) {
           fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
-          startExportFetch();
+          if (exportBtn.disabled) {
+            startExportFetch();
+          }
         } else {
-          showStatus(exportStatus, "error", "File key를 가져올 수 없습니다. 플러그인을 닫고 다시 열어주세요.");
-          exportBtn.disabled = false;
-          exportBtn.textContent = "Export JSON";
+          fileKeyDisplay.innerHTML = "File key: <code style='color:var(--error)'>unavailable</code>";
+          if (exportBtn.disabled) {
+            showStatus(exportStatus, "error", "File key를 가져올 수 없습니다. 플러그인을 닫고 다시 열어주세요.");
+            exportBtn.disabled = false;
+            exportBtn.textContent = "Export JSON";
+          }
         }
         break;
 
