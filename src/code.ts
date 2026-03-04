@@ -19,6 +19,7 @@ const PLACEMENT_OFFSET_Y = -12;
 const GROUP_FRAME_NAME = "🗒 Imported Comments (MVP)";
 const UNPLACED_SECTION_NAME = "📌 Unplaced";
 const TOKEN_STORAGE_KEY = "figmaToken";
+const EXPORT_DATA_KEY = "savedExport";
 
 const COLORS = {
   bg: { r: 1, g: 0.96, b: 0.75 },
@@ -89,6 +90,17 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         fileKey: figma.fileKey,
       });
       break;
+
+    case "save-export":
+      figma.root.setPluginData(EXPORT_DATA_KEY, msg.json);
+      sendToUI({ type: "export-saved" });
+      break;
+
+    case "load-export": {
+      const saved = figma.root.getPluginData(EXPORT_DATA_KEY);
+      sendToUI({ type: "export-load-result", json: saved || null });
+      break;
+    }
   }
 };
 
@@ -194,7 +206,6 @@ function validateImportComment(c: ImportComment): string | null {
   if (!c.originalCommentId) return "missing originalCommentId";
   if (!c.author) return "missing author";
   if (!c.message) return "missing message";
-  if (!c.frameName) return "missing frameName";
 
   const hasRelative =
     c.relativeX !== undefined && c.relativeY !== undefined;

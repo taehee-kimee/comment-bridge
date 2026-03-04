@@ -87,8 +87,9 @@
   .btn-sm:hover { border-color: var(--primary); color: var(--primary); }
   .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer; margin-top: 8px; }
   .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
-  .file-key-display { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; word-break: break-all; }
+  .file-key-display { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; word-break: break-all; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .file-key-display code { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+  .file-key-display .change-btn { flex-shrink: 0; font-size: 10px; padding: 2px 7px; }
 </style>
 </head>
 <body>
@@ -105,6 +106,13 @@
 <div id="tab-import" class="tab-content active">
   <h2>Import Comments</h2>
   <p class="subtitle">Branch 코멘트 JSON을 포스트잇으로 재현합니다</p>
+
+  <div class="section">
+    <label>이 파일에 저장된 Export</label>
+    <button class="btn-sm" id="loadSavedBtn" style="width:100%; padding:9px 12px;">저장된 export 불러오기</button>
+  </div>
+
+  <div class="divider">or</div>
 
   <div class="section">
     <label>Upload JSON file</label>
@@ -159,16 +167,20 @@
   <p class="subtitle">Branch 코멘트를 JSON 파일로 내보냅니다</p>
 
   <div class="file-key-display" id="fileKeyDisplay">
-    File key: <code>loading…</code>
+    <span>File key: <code>loading…</code></span>
   </div>
 
   <div id="fileKeyManualSection" style="display:none; margin-bottom:12px;">
-    <label>File Key <span style="color:var(--error); font-weight:normal; text-transform:none; letter-spacing:0;">(자동 감지 불가 — 직접 입력)</span></label>
+    <label>File Key <span style="color:var(--error); font-weight:normal; text-transform:none; letter-spacing:0;">(자동 감지 불가)</span></label>
+    <button class="btn-sm" id="pasteUrlBtn" style="width:100%; margin-bottom:8px; padding:9px 12px; border-color:var(--primary); color:var(--primary);">
+      클립보드에서 Figma URL 붙여넣기
+    </button>
+    <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:4px 0 6px;">또는 직접 입력</p>
     <input type="text" id="fileKeyManualInput"
-      placeholder="URL에서 복사: figma.com/file/{key}/…"
-      style="width:100%;padding:8px 10px;border:1px solid var(--error);border-radius:var(--radius);font-size:12px;outline:none;background:var(--surface);color:var(--text);font-family:'SF Mono','Fira Code',monospace;" />
+      placeholder="URL 또는 file key 직접 입력"
+      style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;outline:none;background:var(--surface);color:var(--text);font-family:'SF Mono','Fira Code',monospace;" />
     <p style="font-size:11px;color:var(--text-secondary);margin-top:4px;">
-      Figma URL: <code>figma.com/file/<strong style="color:var(--primary)">file-key</strong>/파일명</code>
+      브랜치: <code>figma.com/design/{key}/…?branch-file-key=<strong style="color:var(--primary)">branch-key</strong></code>
     </p>
   </div>
 
@@ -190,8 +202,9 @@
     </label>
   </div>
 
-  <button class="btn btn-primary" id="exportBtn">Export JSON</button>
+  <button class="btn btn-primary" id="exportBtn">Export</button>
   <div class="status" id="exportStatus"></div>
+  <button class="btn-sm" id="downloadBtn" style="display:none; width:100%; margin-top:6px;">JSON으로 다운로드</button>
 
   <details class="info">
     <summary>How to get a token</summary>
@@ -228,7 +241,14 @@
   const saveTokenCb = document.getElementById("saveToken");
   const includeResolvedCb = document.getElementById("includeResolved");
   const exportBtn = document.getElementById("exportBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
   const exportStatus = document.getElementById("exportStatus");
+
+  // Import
+  const loadSavedBtn = document.getElementById("loadSavedBtn");
+
+  let lastExportJson = null;
+  let lastExportFilename = null;
 
   // ── Tab switching ──
   tabBtns.forEach((btn) => {
@@ -243,6 +263,12 @@
   // ══════════════════════════════════════════════════════════════════
   //  IMPORT
   // ══════════════════════════════════════════════════════════════════
+
+  loadSavedBtn.addEventListener("click", () => {
+    parent.postMessage({ pluginMessage: { type: "load-export" } }, "*");
+    loadSavedBtn.textContent = "불러오는 중…";
+    loadSavedBtn.disabled = true;
+  });
 
   fileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -294,7 +320,6 @@
       if (!c.originalCommentId) errors.push("#" + n + ": missing originalCommentId");
       if (!c.author) errors.push("#" + n + ": missing author");
       if (!c.message) errors.push("#" + n + ": missing message");
-      if (!c.frameName) errors.push("#" + n + ": missing frameName");
       const hasRel = c.relativeX !== undefined && c.relativeY !== undefined;
       const hasAbs = c.absoluteX !== undefined && c.absoluteY !== undefined;
       if (!hasRel && !hasAbs) errors.push("#" + n + ": missing coordinates");
@@ -315,10 +340,68 @@
   //  EXPORT
   // ══════════════════════════════════════════════════════════════════
 
+  downloadBtn.addEventListener("click", () => {
+    if (lastExportJson) downloadJson(lastExportJson, lastExportFilename);
+  });
+
   tokenToggle.addEventListener("click", () => {
     const isPassword = tokenInput.type === "password";
     tokenInput.type = isPassword ? "text" : "password";
     tokenToggle.textContent = isPassword ? "Hide" : "Show";
+  });
+
+  // ── File key from clipboard ──
+  function parseFigmaFileKey(text) {
+    try {
+      const u = new URL(text.trim());
+      const branchKey = u.searchParams.get("branch-file-key");
+      if (branchKey) return branchKey;
+      const m = u.pathname.match(/\/(?:design|file|proto)\/([a-zA-Z0-9]+)/);
+      if (m) return m[1];
+    } catch (_) {}
+    // bare key (no slashes, alphanumeric)
+    if (/^[a-zA-Z0-9]{10,}$/.test(text.trim())) return text.trim();
+    return null;
+  }
+
+  function setFileKeyDisplay(html, canChange) {
+    fileKeyDisplay.innerHTML = "<span>" + html + "</span>" +
+      (canChange ? "<button class='btn-sm change-btn' id='changeKeyBtn'>변경</button>" : "");
+    if (canChange) {
+      document.getElementById("changeKeyBtn").addEventListener("click", () => {
+        document.getElementById("fileKeyManualSection").style.display = "block";
+      });
+    }
+  }
+
+  function applyFileKey(key) {
+    fileKey = key;
+    setFileKeyDisplay("File key: <code>" + escapeHtml(key) + "</code>", true);
+    document.getElementById("fileKeyManualSection").style.display = "none";
+  }
+
+  document.getElementById("pasteUrlBtn").addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const key = parseFigmaFileKey(text);
+      if (key) {
+        applyFileKey(key);
+      } else {
+        document.getElementById("fileKeyManualInput").value = text;
+        showStatus(exportStatus, "warning", "Figma URL을 인식하지 못했습니다. file key를 직접 입력해주세요.");
+      }
+    } catch (_) {
+      showStatus(exportStatus, "warning", "클립보드 접근 권한이 없습니다. 아래에 직접 입력해주세요.");
+    }
+  });
+
+  document.getElementById("fileKeyManualInput").addEventListener("paste", (e) => {
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    const key = parseFigmaFileKey(text);
+    if (key) {
+      e.preventDefault();
+      applyFileKey(key);
+    }
   });
 
   exportBtn.addEventListener("click", () => {
@@ -328,8 +411,8 @@
     // Use manually entered file key if provided
     const manualKey = document.getElementById("fileKeyManualInput").value.trim();
     if (manualKey) {
-      fileKey = manualKey;
-      fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+      fileKey = parseFigmaFileKey(manualKey) ?? manualKey;
+      setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
       document.getElementById("fileKeyManualSection").style.display = "none";
     }
 
@@ -408,11 +491,11 @@
       case "init":
         fileKey = msg.fileKey ?? null;
         if (fileKey) {
-          fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+          setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
         } else {
           // fileKey not ready yet at init — request a fresh one, will show manual input if still unavailable
           parent.postMessage({ pluginMessage: { type: "request-filekey" } }, "*");
-          fileKeyDisplay.innerHTML = "File key: <code>detecting…</code>";
+          setFileKeyDisplay("File key: <code>detecting…</code>", false);
         }
         if (msg.savedToken) {
           tokenInput.value = msg.savedToken;
@@ -422,13 +505,13 @@
       case "filekey-response":
         fileKey = msg.fileKey ?? null;
         if (fileKey) {
-          fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+          setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
           document.getElementById("fileKeyManualSection").style.display = "none";
           if (exportBtn.disabled) {
             startExportFetch();
           }
         } else {
-          fileKeyDisplay.innerHTML = "File key: <code style='color:var(--error)'>unavailable</code>";
+          setFileKeyDisplay("File key: <code style='color:var(--error)'>unavailable</code>", false);
           document.getElementById("fileKeyManualSection").style.display = "block";
           if (exportBtn.disabled) {
             showStatus(exportStatus, "warning", "File key를 자동으로 가져올 수 없습니다.\nFigma URL에서 file key를 아래에 직접 입력 후 다시 Export를 눌러주세요.");
@@ -469,9 +552,28 @@
 
       case "export-ready":
         exportBtn.disabled = false;
-        exportBtn.textContent = "Export JSON";
-        downloadJson(msg.json, msg.filename);
-        showStatus(exportStatus, "success", "Export 완료! " + msg.filename + " 다운로드가 시작됩니다.");
+        exportBtn.textContent = "Export";
+        lastExportJson = msg.json;
+        lastExportFilename = msg.filename;
+        downloadBtn.style.display = "none";
+        showStatus(exportStatus, "", "파일에 저장 중…");
+        parent.postMessage({ pluginMessage: { type: "save-export", json: msg.json } }, "*");
+        break;
+
+      case "export-saved":
+        showStatus(exportStatus, "success", "Figma 파일에 저장되었습니다.\nImport 탭에서 바로 불러올 수 있습니다.");
+        downloadBtn.style.display = "block";
+        break;
+
+      case "export-load-result":
+        loadSavedBtn.textContent = "저장된 export 불러오기";
+        loadSavedBtn.disabled = false;
+        if (msg.json) {
+          document.getElementById("jsonInput").value = msg.json;
+          showStatus(importStatus, "success", "저장된 export를 불러왔습니다. Import 버튼을 눌러 적용하세요.");
+        } else {
+          showStatus(importStatus, "warning", "저장된 export가 없습니다.\nExport 탭에서 먼저 export 후 '파일에 저장'을 눌러주세요.");
+        }
         break;
 
       case "export-error":
