@@ -41,12 +41,15 @@ figma.showUI(__html__, { width: 440, height: 560, themeColors: true });
 
 // Send init data to UI
 (async () => {
-  const savedToken =
-    (await figma.clientStorage.getAsync(TOKEN_STORAGE_KEY)) ?? "";
+  const [savedToken, savedExport] = await Promise.all([
+    figma.clientStorage.getAsync(TOKEN_STORAGE_KEY),
+    figma.clientStorage.getAsync(EXPORT_DATA_KEY),
+  ]);
   sendToUI({
     type: "init",
     fileKey: figma.fileKey,
-    savedToken: String(savedToken),
+    savedToken: String(savedToken ?? ""),
+    savedExport: (savedExport as string) ?? null,
   });
 })();
 
@@ -92,13 +95,13 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       break;
 
     case "save-export":
-      figma.root.setPluginData(EXPORT_DATA_KEY, msg.json);
+      await figma.clientStorage.setAsync(EXPORT_DATA_KEY, msg.json);
       sendToUI({ type: "export-saved" });
       break;
 
     case "load-export": {
-      const saved = figma.root.getPluginData(EXPORT_DATA_KEY);
-      sendToUI({ type: "export-load-result", json: saved || null });
+      const saved = (await figma.clientStorage.getAsync(EXPORT_DATA_KEY)) ?? null;
+      sendToUI({ type: "export-load-result", json: saved as string | null });
       break;
     }
   }
