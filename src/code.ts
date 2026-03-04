@@ -92,13 +92,13 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       break;
 
     case "save-export":
-      figma.root.setPluginData(EXPORT_DATA_KEY, msg.json);
+      await figma.clientStorage.setAsync(EXPORT_DATA_KEY, msg.json);
       sendToUI({ type: "export-saved" });
       break;
 
     case "load-export": {
-      const saved = figma.root.getPluginData(EXPORT_DATA_KEY);
-      sendToUI({ type: "export-load-result", json: saved || null });
+      const saved = (await figma.clientStorage.getAsync(EXPORT_DATA_KEY)) ?? null;
+      sendToUI({ type: "export-load-result", json: saved as string | null });
       break;
     }
   }
