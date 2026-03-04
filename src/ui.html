@@ -202,11 +202,9 @@
     </label>
   </div>
 
-  <div style="display:flex; gap:8px;">
-    <button class="btn btn-primary" id="exportBtn" style="flex:1;">Export JSON</button>
-    <button class="btn-sm" id="saveToFileBtn" style="display:none; padding:10px 14px;" title="Figma 파일에 저장">파일에 저장</button>
-  </div>
+  <button class="btn btn-primary" id="exportBtn">Export</button>
   <div class="status" id="exportStatus"></div>
+  <button class="btn-sm" id="downloadBtn" style="display:none; width:100%; margin-top:6px;">JSON으로 다운로드</button>
 
   <details class="info">
     <summary>How to get a token</summary>
@@ -243,13 +241,14 @@
   const saveTokenCb = document.getElementById("saveToken");
   const includeResolvedCb = document.getElementById("includeResolved");
   const exportBtn = document.getElementById("exportBtn");
-  const saveToFileBtn = document.getElementById("saveToFileBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
   const exportStatus = document.getElementById("exportStatus");
 
   // Import
   const loadSavedBtn = document.getElementById("loadSavedBtn");
 
   let lastExportJson = null;
+  let lastExportFilename = null;
 
   // ── Tab switching ──
   tabBtns.forEach((btn) => {
@@ -341,11 +340,8 @@
   //  EXPORT
   // ══════════════════════════════════════════════════════════════════
 
-  saveToFileBtn.addEventListener("click", () => {
-    if (!lastExportJson) return;
-    parent.postMessage({ pluginMessage: { type: "save-export", json: lastExportJson } }, "*");
-    saveToFileBtn.disabled = true;
-    saveToFileBtn.textContent = "저장 중…";
+  downloadBtn.addEventListener("click", () => {
+    if (lastExportJson) downloadJson(lastExportJson, lastExportFilename);
   });
 
   tokenToggle.addEventListener("click", () => {
@@ -556,18 +552,17 @@
 
       case "export-ready":
         exportBtn.disabled = false;
-        exportBtn.textContent = "Export JSON";
+        exportBtn.textContent = "Export";
         lastExportJson = msg.json;
-        saveToFileBtn.style.display = "block";
-        saveToFileBtn.disabled = false;
-        saveToFileBtn.textContent = "파일에 저장";
-        downloadJson(msg.json, msg.filename);
-        showStatus(exportStatus, "success", "Export 완료! " + msg.filename + " 다운로드가 시작됩니다.");
+        lastExportFilename = msg.filename;
+        downloadBtn.style.display = "none";
+        showStatus(exportStatus, "", "파일에 저장 중…");
+        parent.postMessage({ pluginMessage: { type: "save-export", json: msg.json } }, "*");
         break;
 
       case "export-saved":
-        saveToFileBtn.textContent = "저장됨 ✓";
-        showStatus(exportStatus, "success", "이 Figma 파일에 export가 저장되었습니다.\nImport 탭에서 바로 불러올 수 있습니다.");
+        showStatus(exportStatus, "success", "Figma 파일에 저장되었습니다.\nImport 탭에서 바로 불러올 수 있습니다.");
+        downloadBtn.style.display = "block";
         break;
 
       case "export-load-result":
