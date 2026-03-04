@@ -294,7 +294,6 @@
       if (!c.originalCommentId) errors.push("#" + n + ": missing originalCommentId");
       if (!c.author) errors.push("#" + n + ": missing author");
       if (!c.message) errors.push("#" + n + ": missing message");
-      if (!c.frameName) errors.push("#" + n + ": missing frameName");
       const hasRel = c.relativeX !== undefined && c.relativeY !== undefined;
       const hasAbs = c.absoluteX !== undefined && c.absoluteY !== undefined;
       if (!hasRel && !hasAbs) errors.push("#" + n + ": missing coordinates");

@@ -194,7 +194,6 @@ function validateImportComment(c: ImportComment): string | null {
   if (!c.originalCommentId) return "missing originalCommentId";
   if (!c.author) return "missing author";
   if (!c.message) return "missing message";
-  if (!c.frameName) return "missing frameName";
 
   const hasRelative =
     c.relativeX !== undefined && c.relativeY !== undefined;
