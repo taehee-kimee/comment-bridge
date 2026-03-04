@@ -4,7 +4,8 @@ export interface ThreadReply {
   message: string;
 }
 
-/** A single comment entry in the import JSON */
+// ── Import types ─────────────────────────────────────────────────────
+
 export interface ImportComment {
   originalCommentId: string;
   author: string;
@@ -12,17 +13,12 @@ export interface ImportComment {
   thread?: ThreadReply[];
   pageName?: string;
   frameName: string;
-  /** Proportional X within frame (0–1) */
   relativeX?: number;
-  /** Proportional Y within frame (0–1) */
   relativeY?: number;
-  /** Absolute X fallback */
   absoluteX?: number;
-  /** Absolute Y fallback */
   absoluteY?: number;
 }
 
-/** Top-level import JSON structure */
 export interface ImportPayload {
   exportSessionId?: string;
   source?: {
@@ -32,25 +28,75 @@ export interface ImportPayload {
   comments: ImportComment[];
 }
 
-/** Messages sent from UI to plugin code */
-export interface PluginMessage {
-  type: "import-comments";
-  payload: ImportPayload;
-}
-
-/** Per-comment import result */
 export interface CommentResult {
   originalCommentId: string;
   status: "placed" | "unplaced" | "failed";
   reason?: string;
 }
 
-/** Messages sent from plugin code to UI */
-export interface UIMessage {
-  type: "import-complete" | "import-error";
-  placed?: number;
-  unplaced?: number;
-  failed?: number;
-  results?: CommentResult[];
-  error?: string;
+// ── Export types ─────────────────────────────────────────────────────
+
+/** Figma REST API comment structure */
+export interface FigmaAPIComment {
+  id: string;
+  parent_id: string;
+  user: { handle: string; img_url: string };
+  created_at: string;
+  resolved_at: string | null;
+  message: string;
+  client_meta: FigmaClientMeta;
+  order_id: string;
 }
+
+export interface FigmaClientMeta {
+  node_id?: string;
+  node_offset?: { x: number; y: number };
+  x?: number;
+  y?: number;
+}
+
+export interface ExportComment {
+  originalCommentId: string;
+  author: string;
+  message: string;
+  thread: ThreadReply[];
+  isResolved: boolean;
+  pageName: string;
+  frameName: string;
+  nodeId?: string;
+  relativeX?: number;
+  relativeY?: number;
+  absoluteX: number;
+  absoluteY: number;
+}
+
+export interface ExportPayload {
+  exportSessionId: string;
+  source: {
+    fileKey: string;
+    branchName: string;
+  };
+  comments: ExportComment[];
+}
+
+// ── Messages: UI → Plugin ────────────────────────────────────────────
+
+export type PluginMessage =
+  | { type: "import-comments"; payload: ImportPayload }
+  | { type: "process-export"; rawComments: FigmaAPIComment[]; includeResolved: boolean }
+  | { type: "save-token"; token: string };
+
+// ── Messages: Plugin → UI ────────────────────────────────────────────
+
+export type UIMessage =
+  | { type: "init"; fileKey: string | undefined; savedToken: string }
+  | {
+      type: "import-complete";
+      placed: number;
+      unplaced: number;
+      failed: number;
+      results: CommentResult[];
+    }
+  | { type: "import-error"; error: string }
+  | { type: "export-ready"; json: string; filename: string }
+  | { type: "export-error"; error: string };

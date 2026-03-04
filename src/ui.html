@@ -16,228 +16,117 @@
     --error: #d94444;
     --radius: 8px;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     font-family: Inter, system-ui, -apple-system, sans-serif;
     font-size: 13px;
     color: var(--text);
     background: var(--bg);
-    padding: 20px;
+    padding: 0;
     line-height: 1.5;
   }
 
-  h1 {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-
-  .subtitle {
-    color: var(--text-secondary);
-    font-size: 12px;
-    margin-bottom: 20px;
-  }
-
-  .section {
-    margin-bottom: 16px;
-  }
-
-  label {
-    display: block;
-    font-weight: 600;
-    font-size: 12px;
-    margin-bottom: 6px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .file-drop {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    color: var(--text-secondary);
-    font-size: 13px;
-    position: relative;
-  }
-
-  .file-drop:hover,
-  .file-drop.dragover {
-    border-color: var(--primary);
-    background: rgba(91, 91, 247, 0.04);
-  }
-
-  .file-drop input[type="file"] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .file-drop .file-name {
-    color: var(--primary);
-    font-weight: 600;
-    margin-top: 4px;
-  }
-
-  .divider {
+  /* ── Tabs ── */
+  .tab-bar {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 16px 0;
-    color: var(--text-secondary);
-    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
   }
-
-  .divider::before,
-  .divider::after {
-    content: "";
+  .tab-btn {
     flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  textarea {
-    width: 100%;
-    height: 140px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 12px;
-    resize: vertical;
-    outline: none;
-    transition: border-color 0.2s;
-    color: var(--text);
-    background: var(--surface);
-  }
-
-  textarea:focus {
-    border-color: var(--primary);
-  }
-
-  textarea::placeholder {
-    color: #aaa;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 10px 16px;
+    padding: 10px 0;
     border: none;
-    border-radius: var(--radius);
-    font-size: 14px;
+    background: none;
+    font-size: 13px;
     font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
-  }
-
-  .btn-primary {
-    background: var(--primary);
-    color: #ffffff;
-  }
-
-  .btn-primary:hover {
-    background: var(--primary-hover);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .status {
-    margin-top: 12px;
-    padding: 10px 12px;
-    border-radius: var(--radius);
-    font-size: 12px;
-    display: none;
-    white-space: pre-wrap;
-  }
-
-  .status.success {
-    display: block;
-    background: rgba(46, 158, 90, 0.1);
-    color: var(--success);
-    border: 1px solid rgba(46, 158, 90, 0.2);
-  }
-
-  .status.warning {
-    display: block;
-    background: rgba(200, 138, 26, 0.08);
-    color: var(--warning);
-    border: 1px solid rgba(200, 138, 26, 0.15);
-  }
-
-  .status.error {
-    display: block;
-    background: rgba(217, 68, 68, 0.08);
-    color: var(--error);
-    border: 1px solid rgba(217, 68, 68, 0.15);
-  }
-
-  .info {
-    margin-top: 16px;
-    padding: 10px 12px;
-    background: var(--surface);
-    border-radius: var(--radius);
-    font-size: 11px;
     color: var(--text-secondary);
-    line-height: 1.6;
-  }
-
-  .info summary {
     cursor: pointer;
-    font-weight: 600;
-    font-size: 12px;
-    margin-bottom: 4px;
+    transition: color 0.15s, box-shadow 0.15s;
   }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--primary);
+    box-shadow: inset 0 -2px 0 var(--primary);
+  }
+  .tab-content { display: none; padding: 20px; }
+  .tab-content.active { display: block; }
 
-  .info pre {
-    margin-top: 8px;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 8px;
-    font-size: 10px;
-    overflow-x: auto;
-    white-space: pre;
-  }
+  /* ── Shared ── */
+  h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; }
+  .section { margin-bottom: 16px; }
+  label { display: block; font-weight: 600; font-size: 11px; margin-bottom: 6px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+  .btn { width: 100%; padding: 10px 16px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius); font-size: 12px; display: none; white-space: pre-wrap; }
+  .status.success { display: block; background: rgba(46,158,90,.1); color: var(--success); border: 1px solid rgba(46,158,90,.2); }
+  .status.warning { display: block; background: rgba(200,138,26,.08); color: var(--warning); border: 1px solid rgba(200,138,26,.15); }
+  .status.error { display: block; background: rgba(217,68,68,.08); color: var(--error); border: 1px solid rgba(217,68,68,.15); }
+  .info { margin-top: 16px; padding: 10px 12px; background: var(--surface); border-radius: var(--radius); font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
+  .info summary { cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+  .info pre { margin-top: 8px; background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 10px; overflow-x: auto; white-space: pre; }
+
+  /* ── Import ── */
+  .file-drop { border: 2px dashed var(--border); border-radius: var(--radius); padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; color: var(--text-secondary); font-size: 13px; position: relative; }
+  .file-drop:hover, .file-drop.dragover { border-color: var(--primary); background: rgba(91,91,247,.04); }
+  .file-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .file-drop .file-name { color: var(--primary); font-weight: 600; margin-top: 4px; }
+  .divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--text-secondary); font-size: 12px; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  textarea { width: 100%; height: 130px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: "SF Mono","Fira Code",monospace; font-size: 12px; resize: vertical; outline: none; transition: border-color 0.2s; color: var(--text); background: var(--surface); }
+  textarea:focus { border-color: var(--primary); }
+  textarea::placeholder { color: #aaa; }
+
+  /* ── Export ── */
+  .token-row { display: flex; gap: 8px; }
+  .token-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; outline: none; background: var(--surface); color: var(--text); font-family: "SF Mono","Fira Code",monospace; }
+  .token-row input:focus { border-color: var(--primary); }
+  .btn-sm { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text-secondary); }
+  .btn-sm:hover { border-color: var(--primary); color: var(--primary); }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer; margin-top: 8px; }
+  .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
+  .file-key-display { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; word-break: break-all; }
+  .file-key-display code { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
 </style>
 </head>
 <body>
 
-<h1>Comment Bridge</h1>
-<p class="subtitle">Import branch comments as post-it annotations</p>
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="import">Import</button>
+  <button class="tab-btn" data-tab="export">Export</button>
+</div>
 
-<!-- File upload -->
-<div class="section">
-  <label>Upload JSON file</label>
-  <div class="file-drop" id="fileDrop">
-    <span id="fileLabel">Click or drag & drop a .json file</span>
-    <input type="file" accept=".json" id="fileInput" />
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- IMPORT TAB -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-import" class="tab-content active">
+  <h2>Import Comments</h2>
+  <p class="subtitle">Branch 코멘트 JSON을 포스트잇으로 재현합니다</p>
+
+  <div class="section">
+    <label>Upload JSON file</label>
+    <div class="file-drop" id="fileDrop">
+      <span id="fileLabel">Click or drag &amp; drop a .json file</span>
+      <input type="file" accept=".json" id="fileInput" />
+    </div>
   </div>
-</div>
 
-<div class="divider">or</div>
+  <div class="divider">or</div>
 
-<!-- Paste JSON -->
-<div class="section">
-  <label>Paste JSON</label>
-  <textarea id="jsonInput" placeholder='{ "comments": [{ "originalCommentId": "1", "author": "...", ... }] }'></textarea>
-</div>
+  <div class="section">
+    <label>Paste JSON</label>
+    <textarea id="jsonInput" placeholder='{ "comments": [{ "originalCommentId": "1", ... }] }'></textarea>
+  </div>
 
-<button class="btn btn-primary" id="importBtn">Import Comments</button>
+  <button class="btn btn-primary" id="importBtn">Import Comments</button>
+  <div class="status" id="importStatus"></div>
 
-<div class="status" id="status"></div>
-
-<details class="info">
-  <summary>JSON format reference</summary>
-  <pre>{
+  <details class="info">
+    <summary>JSON format reference</summary>
+    <pre>{
   "exportSessionId": "session-001",
   "source": {
     "fileKey": "abc123",
@@ -254,44 +143,105 @@
       "absoluteX": 400,
       "absoluteY": 300,
       "thread": [
-        {
-          "author": "Developer B",
-          "message": "Fixed in latest push"
-        }
+        { "author": "Dev B", "message": "Fixed!" }
       ]
     }
   ]
 }</pre>
-</details>
+  </details>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- EXPORT TAB -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-export" class="tab-content">
+  <h2>Export Comments</h2>
+  <p class="subtitle">Branch 코멘트를 JSON 파일로 내보냅니다</p>
+
+  <div class="file-key-display" id="fileKeyDisplay">
+    File key: <code>loading…</code>
+  </div>
+
+  <div class="section">
+    <label>Figma Access Token</label>
+    <div class="token-row">
+      <input type="password" id="tokenInput" placeholder="Personal access token" />
+      <button class="btn-sm" id="tokenToggle">Show</button>
+    </div>
+    <label class="checkbox-label">
+      <input type="checkbox" id="saveToken" checked /> Remember token
+    </label>
+  </div>
+
+  <div class="section">
+    <label>Options</label>
+    <label class="checkbox-label">
+      <input type="checkbox" id="includeResolved" /> Include resolved comments
+    </label>
+  </div>
+
+  <button class="btn btn-primary" id="exportBtn">Export JSON</button>
+  <div class="status" id="exportStatus"></div>
+
+  <details class="info">
+    <summary>How to get a token</summary>
+    <p style="margin-top:6px;">
+      1. Go to <strong>figma.com/settings</strong><br>
+      2. Scroll to <strong>Personal access tokens</strong><br>
+      3. Click <strong>Generate new token</strong><br>
+      4. Copy and paste it above
+    </p>
+  </details>
+</div>
 
 <script>
+  // ── State ──
+  let fileKey = null;
+  let fileData = null; // import file content
+
+  // ── DOM refs ──
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  // Import
   const fileInput = document.getElementById("fileInput");
   const fileDrop = document.getElementById("fileDrop");
   const fileLabel = document.getElementById("fileLabel");
   const jsonInput = document.getElementById("jsonInput");
   const importBtn = document.getElementById("importBtn");
-  const statusEl = document.getElementById("status");
+  const importStatus = document.getElementById("importStatus");
 
-  let fileData = null;
+  // Export
+  const fileKeyDisplay = document.getElementById("fileKeyDisplay");
+  const tokenInput = document.getElementById("tokenInput");
+  const tokenToggle = document.getElementById("tokenToggle");
+  const saveTokenCb = document.getElementById("saveToken");
+  const includeResolvedCb = document.getElementById("includeResolved");
+  const exportBtn = document.getElementById("exportBtn");
+  const exportStatus = document.getElementById("exportStatus");
 
-  // ── File handling ──
+  // ── Tab switching ──
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach((b) => b.classList.remove("active"));
+      tabContents.forEach((c) => c.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  //  IMPORT
+  // ══════════════════════════════════════════════════════════════════
+
   fileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) readFile(file);
   });
-
-  fileDrop.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    fileDrop.classList.add("dragover");
-  });
-
-  fileDrop.addEventListener("dragleave", () => {
-    fileDrop.classList.remove("dragover");
-  });
-
+  fileDrop.addEventListener("dragover", (e) => { e.preventDefault(); fileDrop.classList.add("dragover"); });
+  fileDrop.addEventListener("dragleave", () => fileDrop.classList.remove("dragover"));
   fileDrop.addEventListener("drop", (e) => {
-    e.preventDefault();
-    fileDrop.classList.remove("dragover");
+    e.preventDefault(); fileDrop.classList.remove("dragover");
     const file = e.dataTransfer.files[0];
     if (file) readFile(file);
   });
@@ -314,34 +264,20 @@
     }
   });
 
-  // ── Import ──
   importBtn.addEventListener("click", () => {
     const raw = fileData || jsonInput.value.trim();
-
-    if (!raw) {
-      showStatus("error", "Please upload a file or paste JSON.");
-      return;
-    }
+    if (!raw) { showStatus(importStatus, "error", "Please upload a file or paste JSON."); return; }
 
     let payload;
-    try {
-      payload = JSON.parse(raw);
-    } catch (e) {
-      showStatus("error", "유효한 JSON이 아닙니다: " + e.message);
-      return;
-    }
+    try { payload = JSON.parse(raw); }
+    catch (e) { showStatus(importStatus, "error", "유효한 JSON이 아닙니다: " + e.message); return; }
 
-    // Support both { comments: [...] } and bare array
-    if (Array.isArray(payload)) {
-      payload = { comments: payload };
-    }
-
+    if (Array.isArray(payload)) payload = { comments: payload };
     if (!payload.comments || !Array.isArray(payload.comments) || payload.comments.length === 0) {
-      showStatus("error", "코멘트가 없습니다 (comments 배열이 비어있거나 없습니다)");
+      showStatus(importStatus, "error", "코멘트가 없습니다 (comments 배열이 비어있거나 없습니다)");
       return;
     }
 
-    // Quick client-side validation
     const errors = [];
     payload.comments.forEach((c, i) => {
       const n = i + 1;
@@ -353,65 +289,173 @@
       const hasAbs = c.absoluteX !== undefined && c.absoluteY !== undefined;
       if (!hasRel && !hasAbs) errors.push("#" + n + ": missing coordinates");
     });
-
     if (errors.length > 0) {
-      showStatus("error", errors.slice(0, 5).join("\n") +
+      showStatus(importStatus, "error", errors.slice(0, 5).join("\n") +
         (errors.length > 5 ? "\n... and " + (errors.length - 5) + " more" : ""));
       return;
     }
 
     importBtn.disabled = true;
     importBtn.textContent = "Importing…";
-    showStatus("", "");
-
-    parent.postMessage({
-      pluginMessage: { type: "import-comments", payload: payload }
-    }, "*");
+    showStatus(importStatus, "", "");
+    parent.postMessage({ pluginMessage: { type: "import-comments", payload } }, "*");
   });
 
-  // ── Messages from plugin ──
+  // ══════════════════════════════════════════════════════════════════
+  //  EXPORT
+  // ══════════════════════════════════════════════════════════════════
+
+  tokenToggle.addEventListener("click", () => {
+    const isPassword = tokenInput.type === "password";
+    tokenInput.type = isPassword ? "text" : "password";
+    tokenToggle.textContent = isPassword ? "Hide" : "Show";
+  });
+
+  exportBtn.addEventListener("click", async () => {
+    const token = tokenInput.value.trim();
+    if (!token) { showStatus(exportStatus, "error", "Access token을 입력해주세요."); return; }
+    if (!fileKey) { showStatus(exportStatus, "error", "File key를 가져올 수 없습니다. 파일이 저장되어 있는지 확인해주세요."); return; }
+
+    exportBtn.disabled = true;
+    exportBtn.textContent = "Fetching comments…";
+    showStatus(exportStatus, "", "");
+
+    // Save token if checkbox is checked
+    if (saveTokenCb.checked) {
+      parent.postMessage({ pluginMessage: { type: "save-token", token } }, "*");
+    }
+
+    try {
+      const res = await fetch("https://api.figma.com/v1/files/" + fileKey + "/comments", {
+        headers: { "X-Figma-Token": token }
+      });
+
+      if (!res.ok) {
+        const body = await res.text();
+        if (res.status === 403 || res.status === 401) {
+          throw new Error("인증 실패: 토큰이 유효한지 확인해주세요.");
+        }
+        throw new Error("Figma API error " + res.status + ": " + body);
+      }
+
+      const data = await res.json();
+      const rawComments = data.comments || [];
+
+      if (rawComments.length === 0) {
+        showStatus(exportStatus, "warning", "이 파일에 코멘트가 없습니다.");
+        exportBtn.disabled = false;
+        exportBtn.textContent = "Export JSON";
+        return;
+      }
+
+      exportBtn.textContent = "Processing…";
+
+      // Send raw comments to plugin for position resolution
+      parent.postMessage({
+        pluginMessage: {
+          type: "process-export",
+          rawComments: rawComments,
+          includeResolved: includeResolvedCb.checked
+        }
+      }, "*");
+
+    } catch (e) {
+      showStatus(exportStatus, "error", e.message);
+      exportBtn.disabled = false;
+      exportBtn.textContent = "Export JSON";
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  //  Messages from plugin
+  // ══════════════════════════════════════════════════════════════════
+
   window.onmessage = (event) => {
     const msg = event.data.pluginMessage;
     if (!msg) return;
 
-    importBtn.disabled = false;
-    importBtn.textContent = "Import Comments";
-
-    if (msg.type === "import-complete") {
-      const parts = [];
-      if (msg.placed > 0) parts.push(msg.placed + " placed");
-      if (msg.unplaced > 0) parts.push(msg.unplaced + " unplaced");
-      if (msg.failed > 0) parts.push(msg.failed + " failed");
-      const summary = parts.join(", ");
-
-      if (msg.failed > 0 || msg.unplaced > 0) {
-        let detail = summary;
-        if (msg.results) {
-          const issues = msg.results.filter(r => r.status !== "placed");
-          if (issues.length > 0) {
-            detail += "\n\n" + issues.map(r =>
-              "[" + r.status.toUpperCase() + "] " + r.originalCommentId + ": " + (r.reason || "")
-            ).join("\n");
-          }
+    switch (msg.type) {
+      case "init":
+        fileKey = msg.fileKey || null;
+        if (fileKey) {
+          fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+        } else {
+          fileKeyDisplay.innerHTML = "File key: <code style='color:var(--error)'>unavailable (save file first)</code>";
         }
-        showStatus("warning", "Import completed: " + detail);
-      } else {
-        showStatus("success", "Successfully imported " + msg.placed + " comment(s)!");
-      }
-    } else if (msg.type === "import-error") {
-      showStatus("error", "Error: " + msg.error);
+        if (msg.savedToken) {
+          tokenInput.value = msg.savedToken;
+        }
+        break;
+
+      case "import-complete":
+        importBtn.disabled = false;
+        importBtn.textContent = "Import Comments";
+        if (msg.failed > 0 || msg.unplaced > 0) {
+          const parts = [];
+          if (msg.placed > 0) parts.push(msg.placed + " placed");
+          if (msg.unplaced > 0) parts.push(msg.unplaced + " unplaced");
+          if (msg.failed > 0) parts.push(msg.failed + " failed");
+          let detail = parts.join(", ");
+          if (msg.results) {
+            const issues = msg.results.filter(r => r.status !== "placed");
+            if (issues.length > 0) {
+              detail += "\n\n" + issues.map(r =>
+                "[" + r.status.toUpperCase() + "] " + r.originalCommentId + ": " + (r.reason || "")
+              ).join("\n");
+            }
+          }
+          showStatus(importStatus, "warning", "Import completed: " + detail);
+        } else {
+          showStatus(importStatus, "success", msg.placed + "개 코멘트를 성공적으로 import했습니다!");
+        }
+        break;
+
+      case "import-error":
+        importBtn.disabled = false;
+        importBtn.textContent = "Import Comments";
+        showStatus(importStatus, "error", "Error: " + msg.error);
+        break;
+
+      case "export-ready":
+        exportBtn.disabled = false;
+        exportBtn.textContent = "Export JSON";
+        downloadJson(msg.json, msg.filename);
+        showStatus(exportStatus, "success", "Export 완료! " + msg.filename + " 다운로드가 시작됩니다.");
+        break;
+
+      case "export-error":
+        exportBtn.disabled = false;
+        exportBtn.textContent = "Export JSON";
+        showStatus(exportStatus, "error", msg.error);
+        break;
     }
   };
 
-  function showStatus(type, text) {
-    statusEl.className = "status" + (type ? " " + type : "");
-    statusEl.textContent = text;
+  // ══════════════════════════════════════════════════════════════════
+  //  Helpers
+  // ══════════════════════════════════════════════════════════════════
+
+  function showStatus(el, type, text) {
+    el.className = "status" + (type ? " " + type : "");
+    el.textContent = text;
   }
 
   function escapeHtml(str) {
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function downloadJson(json, filename) {
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 </script>
 

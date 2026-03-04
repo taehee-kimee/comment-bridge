@@ -2,18 +2,23 @@ import type {
   ImportComment,
   ImportPayload,
   CommentResult,
+  FigmaAPIComment,
+  FigmaClientMeta,
+  ExportComment,
+  ExportPayload,
   PluginMessage,
   UIMessage,
 } from "./types";
 
 // ── Constants ────────────────────────────────────────────────────────
 const POST_IT_WIDTH = 280;
-const CLUSTER_THRESHOLD = 16; // ±px to consider "same cluster"
-const STACK_STEP_Y = 12;     // vertical offset per stack index
+const CLUSTER_THRESHOLD = 16;
+const STACK_STEP_Y = 12;
 const PLACEMENT_OFFSET_X = 24;
 const PLACEMENT_OFFSET_Y = -12;
 const GROUP_FRAME_NAME = "🗒 Imported Comments (MVP)";
 const UNPLACED_SECTION_NAME = "📌 Unplaced";
+const TOKEN_STORAGE_KEY = "figmaToken";
 
 const COLORS = {
   bg: { r: 1, g: 0.96, b: 0.75 },
@@ -27,17 +32,56 @@ const COLORS = {
   groupBg: { r: 0.97, g: 0.97, b: 0.97 },
 };
 
-// ── Entry ────────────────────────────────────────────────────────────
-figma.showUI(__html__, { width: 420, height: 520, themeColors: true });
+// ══════════════════════════════════════════════════════════════════════
+//  Entry
+// ══════════════════════════════════════════════════════════════════════
+
+figma.showUI(__html__, { width: 440, height: 560, themeColors: true });
+
+// Send init data to UI
+(async () => {
+  const savedToken =
+    (await figma.clientStorage.getAsync(TOKEN_STORAGE_KEY)) ?? "";
+  sendToUI({
+    type: "init",
+    fileKey: figma.fileKey,
+    savedToken: String(savedToken),
+  });
+})();
 
 figma.ui.onmessage = async (msg: PluginMessage) => {
-  if (msg.type === "import-comments") {
-    try {
-      await importComments(msg.payload);
-    } catch (e: unknown) {
-      const error = e instanceof Error ? e.message : String(e);
-      sendToUI({ type: "import-error", error });
-    }
+  switch (msg.type) {
+    case "import-comments":
+      try {
+        await importComments(msg.payload);
+      } catch (e: unknown) {
+        sendToUI({
+          type: "import-error",
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+      break;
+
+    case "process-export":
+      try {
+        const result = processExport(msg.rawComments, msg.includeResolved);
+        const filename = `figma-comments-export-${todayStr()}.json`;
+        sendToUI({
+          type: "export-ready",
+          json: JSON.stringify(result, null, 2),
+          filename,
+        });
+      } catch (e: unknown) {
+        sendToUI({
+          type: "export-error",
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+      break;
+
+    case "save-token":
+      await figma.clientStorage.setAsync(TOKEN_STORAGE_KEY, msg.token);
+      break;
   }
 };
 
@@ -45,7 +89,10 @@ function sendToUI(msg: UIMessage) {
   figma.ui.postMessage(msg);
 }
 
-// ── Import pipeline ──────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+//  IMPORT
+// ══════════════════════════════════════════════════════════════════════
+
 async function importComments(payload: ImportPayload): Promise<void> {
   await figma.loadFontAsync({ family: "Inter", style: "Regular" });
   await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
@@ -55,23 +102,22 @@ async function importComments(payload: ImportPayload): Promise<void> {
   const unplacedNodes: FrameNode[] = [];
 
   for (const comment of payload.comments) {
-    // ── Validate required fields ──
-    const fail = validateComment(comment);
+    const fail = validateImportComment(comment);
     if (fail) {
       results.push({
         originalCommentId: comment.originalCommentId ?? "unknown",
         status: "failed",
         reason: fail,
       });
-      console.error(`[Comment Bridge] SKIP ${comment.originalCommentId}: ${fail}`);
+      console.error(
+        `[Comment Bridge] SKIP ${comment.originalCommentId}: ${fail}`
+      );
       continue;
     }
 
-    // ── Resolve position ──
-    const placement = resolvePosition(comment);
+    const placement = resolveImportPosition(comment);
     const postIt = createPostIt(comment);
 
-    // Store pluginData
     postIt.setPluginData("originalCommentId", comment.originalCommentId);
     if (payload.exportSessionId) {
       postIt.setPluginData("exportSessionId", payload.exportSessionId);
@@ -82,9 +128,11 @@ async function importComments(payload: ImportPayload): Promise<void> {
 
     if (placement) {
       placedNodes.push({ node: postIt, x: placement.x, y: placement.y });
-      results.push({ originalCommentId: comment.originalCommentId, status: "placed" });
+      results.push({
+        originalCommentId: comment.originalCommentId,
+        status: "placed",
+      });
     } else {
-      // Add frameName meta for unplaced
       addMetaLabel(postIt, `frameName: ${comment.frameName}`);
       unplacedNodes.push(postIt);
       results.push({
@@ -95,14 +143,12 @@ async function importComments(payload: ImportPayload): Promise<void> {
     }
   }
 
-  // ── Apply stacking to placed nodes ──
   applyStacking(placedNodes);
   for (const { node, x, y } of placedNodes) {
     node.x = x;
     node.y = y;
   }
 
-  // ── Build group frame ──
   const allNodes = [
     ...placedNodes.map((p) => p.node),
     ...unplacedNodes,
@@ -111,13 +157,11 @@ async function importComments(payload: ImportPayload): Promise<void> {
   if (allNodes.length > 0) {
     const group = createGroupFrame();
 
-    // Add unplaced section if needed
     if (unplacedNodes.length > 0) {
       const section = createUnplacedSection(unplacedNodes);
       group.appendChild(section);
     }
 
-    // Append placed nodes (they keep their absolute positions)
     for (const { node } of placedNodes) {
       group.appendChild(node);
     }
@@ -134,12 +178,12 @@ async function importComments(payload: ImportPayload): Promise<void> {
   figma.notify(
     `Imported: ${placed} placed, ${unplaced} unplaced, ${failed} failed`
   );
-
   sendToUI({ type: "import-complete", placed, unplaced, failed, results });
 }
 
-// ── Validation ───────────────────────────────────────────────────────
-function validateComment(c: ImportComment): string | null {
+// ── Import validation ────────────────────────────────────────────────
+
+function validateImportComment(c: ImportComment): string | null {
   if (!c.originalCommentId) return "missing originalCommentId";
   if (!c.author) return "missing author";
   if (!c.message) return "missing message";
@@ -149,22 +193,20 @@ function validateComment(c: ImportComment): string | null {
     c.relativeX !== undefined && c.relativeY !== undefined;
   const hasAbsolute =
     c.absoluteX !== undefined && c.absoluteY !== undefined;
-  if (!hasRelative && !hasAbsolute) return "missing coordinates (need relativeX/Y or absoluteX/Y)";
+  if (!hasRelative && !hasAbsolute)
+    return "missing coordinates (need relativeX/Y or absoluteX/Y)";
 
   return null;
 }
 
-// ── Position resolution ──────────────────────────────────────────────
-interface PlacedPosition {
-  x: number;
-  y: number;
-}
+// ── Import position resolution ───────────────────────────────────────
 
-function resolvePosition(comment: ImportComment): PlacedPosition | null {
+function resolveImportPosition(
+  comment: ImportComment
+): { x: number; y: number } | null {
   const targetFrame = findFrameByName(comment.frameName);
 
   if (!targetFrame) {
-    // Cannot place — will go to unplaced section
     if (comment.absoluteX !== undefined && comment.absoluteY !== undefined) {
       return {
         x: comment.absoluteX + PLACEMENT_OFFSET_X,
@@ -178,18 +220,15 @@ function resolvePosition(comment: ImportComment): PlacedPosition | null {
   let y: number;
 
   if (comment.relativeX !== undefined && comment.relativeY !== undefined) {
-    // Proportional: clamp 0–1 then multiply by frame dimensions
     const rx = clamp(comment.relativeX, 0, 1);
     const ry = clamp(comment.relativeY, 0, 1);
     x = targetFrame.absoluteTransform[0][2] + targetFrame.width * rx;
     y = targetFrame.absoluteTransform[1][2] + targetFrame.height * ry;
   } else {
-    // Absolute fallback
     x = comment.absoluteX!;
     y = comment.absoluteY!;
   }
 
-  // Offset so post-it doesn't cover the target UI element
   x += PLACEMENT_OFFSET_X;
   y += PLACEMENT_OFFSET_Y;
 
@@ -200,13 +239,14 @@ function findFrameByName(name: string): SceneNode | null {
   const matches = figma.currentPage.findAll(
     (n) =>
       n.name === name &&
-      (n.type === "FRAME" || n.type === "COMPONENT" || n.type === "SECTION")
+      (n.type === "FRAME" ||
+        n.type === "COMPONENT" ||
+        n.type === "SECTION")
   );
 
   if (matches.length === 0) return null;
   if (matches.length === 1) return matches[0];
 
-  // Multiple matches: prefer frame closest to current selection
   const sel = figma.currentPage.selection;
   if (sel.length > 0) {
     const selCenter = getCenter(sel[0]);
@@ -226,18 +266,11 @@ function findFrameByName(name: string): SceneNode | null {
   return matches[0];
 }
 
-function getCenter(node: SceneNode): { x: number; y: number } {
-  return {
-    x: node.absoluteTransform[0][2] + node.width / 2,
-    y: node.absoluteTransform[1][2] + node.height / 2,
-  };
-}
+// ── Import stacking ──────────────────────────────────────────────────
 
-// ── Stacking (cluster-based) ─────────────────────────────────────────
 function applyStacking(
   nodes: { node: FrameNode; x: number; y: number }[]
 ): void {
-  // For each node, check how many previous nodes are within ±CLUSTER_THRESHOLD
   for (let i = 0; i < nodes.length; i++) {
     let clusterIndex = 0;
     for (let j = 0; j < i; j++) {
@@ -254,7 +287,153 @@ function applyStacking(
   }
 }
 
-// ── Post-it card creation ────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════════════════════════════
+
+function processExport(
+  rawComments: FigmaAPIComment[],
+  includeResolved: boolean
+): ExportPayload {
+  // 1. Filter resolved
+  const filtered = includeResolved
+    ? rawComments
+    : rawComments.filter((c) => !c.resolved_at);
+
+  // 2. Separate top-level comments and replies
+  const topLevel = filtered.filter(
+    (c) => !c.parent_id || c.parent_id === ""
+  );
+  const repliesMap = new Map<string, FigmaAPIComment[]>();
+  for (const c of filtered) {
+    if (c.parent_id && c.parent_id !== "") {
+      const arr = repliesMap.get(c.parent_id) ?? [];
+      arr.push(c);
+      repliesMap.set(c.parent_id, arr);
+    }
+  }
+
+  // 3. Resolve each top-level comment
+  const comments: ExportComment[] = [];
+  for (const c of topLevel) {
+    const pos = resolveExportPosition(c.client_meta);
+    const thread = (repliesMap.get(c.id) ?? []).map((r) => ({
+      author: r.user.handle,
+      message: r.message,
+    }));
+
+    comments.push({
+      originalCommentId: c.id,
+      author: c.user.handle,
+      message: c.message,
+      thread,
+      isResolved: c.resolved_at !== null,
+      ...pos,
+    });
+  }
+
+  // 4. Build payload
+  const docName = figma.root.name ?? "unknown";
+  const sessionId = `${docName}_${new Date().toISOString().slice(0, 16)}`;
+
+  return {
+    exportSessionId: sessionId,
+    source: {
+      fileKey: figma.fileKey ?? "",
+      branchName: "",
+    },
+    comments,
+  };
+}
+
+// ── Export position resolution ────────────────────────────────────────
+
+interface ExportPosition {
+  pageName: string;
+  frameName: string;
+  nodeId?: string;
+  relativeX?: number;
+  relativeY?: number;
+  absoluteX: number;
+  absoluteY: number;
+}
+
+function resolveExportPosition(meta: FigmaClientMeta): ExportPosition {
+  if (meta.node_id) {
+    const node = figma.getNodeById(meta.node_id);
+
+    if (node && "absoluteTransform" in node) {
+      const sceneNode = node as SceneNode;
+      const commentX =
+        sceneNode.absoluteTransform[0][2] + (meta.node_offset?.x ?? 0);
+      const commentY =
+        sceneNode.absoluteTransform[1][2] + (meta.node_offset?.y ?? 0);
+
+      const topFrame = findTopLevelFrame(node);
+      const page = findPage(node);
+
+      if (topFrame && "absoluteTransform" in topFrame) {
+        const tf = topFrame as SceneNode;
+        const frameX = tf.absoluteTransform[0][2];
+        const frameY = tf.absoluteTransform[1][2];
+
+        return {
+          pageName: page?.name ?? "",
+          frameName: topFrame.name,
+          nodeId: meta.node_id,
+          relativeX:
+            tf.width > 0 ? (commentX - frameX) / tf.width : 0,
+          relativeY:
+            tf.height > 0 ? (commentY - frameY) / tf.height : 0,
+          absoluteX: Math.round(commentX),
+          absoluteY: Math.round(commentY),
+        };
+      }
+
+      // Node found, but no parent frame — use pageName + absolute
+      return {
+        pageName: page?.name ?? "",
+        frameName: "",
+        nodeId: meta.node_id,
+        absoluteX: Math.round(commentX),
+        absoluteY: Math.round(commentY),
+      };
+    }
+  }
+
+  // No node_id or node not found — absolute only
+  return {
+    pageName: "",
+    frameName: "",
+    absoluteX: Math.round(meta.x ?? 0),
+    absoluteY: Math.round(meta.y ?? 0),
+  };
+}
+
+function findTopLevelFrame(node: BaseNode): BaseNode | null {
+  let current: BaseNode | null = node;
+  while (current) {
+    if (current.parent?.type === "PAGE") {
+      return current;
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
+function findPage(node: BaseNode): PageNode | null {
+  let current: BaseNode | null = node;
+  while (current) {
+    if (current.type === "PAGE") return current as PageNode;
+    current = current.parent;
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Post-it card creation (shared)
+// ══════════════════════════════════════════════════════════════════════
+
 function createPostIt(comment: ImportComment): FrameNode {
   const frame = figma.createFrame();
   const label =
@@ -286,7 +465,7 @@ function createPostIt(comment: ImportComment): FrameNode {
     },
   ];
 
-  // ── Header: Author ──
+  // Header: Author
   const authorText = figma.createText();
   authorText.fontName = { family: "Inter", style: "Semi Bold" };
   authorText.characters = comment.author;
@@ -295,7 +474,7 @@ function createPostIt(comment: ImportComment): FrameNode {
   frame.appendChild(authorText);
   authorText.layoutSizingHorizontal = "FILL";
 
-  // ── Body: Message ──
+  // Body: Message
   const messageText = figma.createText();
   messageText.fontName = { family: "Inter", style: "Regular" };
   messageText.characters = comment.message;
@@ -306,7 +485,7 @@ function createPostIt(comment: ImportComment): FrameNode {
   messageText.layoutSizingHorizontal = "FILL";
   messageText.textAutoResize = "HEIGHT";
 
-  // ── Thread ──
+  // Thread
   if (comment.thread && comment.thread.length > 0) {
     const sep = figma.createFrame();
     sep.resize(POST_IT_WIDTH - 28, 1);
@@ -348,7 +527,6 @@ function createPostIt(comment: ImportComment): FrameNode {
   return frame;
 }
 
-// ── Meta label for unplaced cards ────────────────────────────────────
 function addMetaLabel(frame: FrameNode, text: string): void {
   const meta = figma.createText();
   meta.fontName = { family: "Inter", style: "Regular" };
@@ -359,13 +537,12 @@ function addMetaLabel(frame: FrameNode, text: string): void {
   meta.layoutSizingHorizontal = "FILL";
 }
 
-// ── Group frame ──────────────────────────────────────────────────────
+// ── Group / unplaced frames ──────────────────────────────────────────
+
 function createGroupFrame(): FrameNode {
   const group = figma.createFrame();
   group.name = GROUP_FRAME_NAME;
   group.fills = [];
-  // Use auto-layout so children are manageable, but placed nodes need absolute positioning
-  // We'll use a non-auto-layout frame so placed nodes keep their x/y
   group.clipsContent = false;
   return group;
 }
@@ -384,7 +561,6 @@ function createUnplacedSection(nodes: FrameNode[]): FrameNode {
   section.cornerRadius = 8;
   section.fills = [{ type: "SOLID", color: COLORS.groupBg }];
 
-  // Title
   const title = figma.createText();
   title.fontName = { family: "Inter", style: "Semi Bold" };
   title.characters = "Unplaced Comments (frame not found)";
@@ -400,6 +576,18 @@ function createUnplacedSection(nodes: FrameNode[]): FrameNode {
 }
 
 // ── Utils ────────────────────────────────────────────────────────────
+
 function clamp(val: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, val));
+}
+
+function getCenter(node: SceneNode): { x: number; y: number } {
+  return {
+    x: node.absoluteTransform[0][2] + node.width / 2,
+    y: node.absoluteTransform[1][2] + node.height / 2,
+  };
+}
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
 }
