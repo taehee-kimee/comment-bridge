@@ -452,7 +452,7 @@
       }
 
       const data = await res.json();
-      const rawComments = data.comments || [];
+      const rawComments = data.meta?.comments ?? data.comments ?? [];
 
       if (rawComments.length === 0) {
         showStatus(exportStatus, "warning", "이 파일에 코멘트가 없습니다.");
