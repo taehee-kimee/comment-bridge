@@ -12,6 +12,7 @@
     --primary: #5b5bf7;
     --primary-hover: #4a4ae0;
     --success: #2e9e5a;
+    --warning: #c88a1a;
     --error: #d94444;
     --radius: 8px;
   }
@@ -155,6 +156,7 @@
     border-radius: var(--radius);
     font-size: 12px;
     display: none;
+    white-space: pre-wrap;
   }
 
   .status.success {
@@ -162,6 +164,13 @@
     background: rgba(46, 158, 90, 0.1);
     color: var(--success);
     border: 1px solid rgba(46, 158, 90, 0.2);
+  }
+
+  .status.warning {
+    display: block;
+    background: rgba(200, 138, 26, 0.08);
+    color: var(--warning);
+    border: 1px solid rgba(200, 138, 26, 0.15);
   }
 
   .status.error {
@@ -219,7 +228,7 @@
 <!-- Paste JSON -->
 <div class="section">
   <label>Paste JSON</label>
-  <textarea id="jsonInput" placeholder='[{ "id": "1", "author": "...", "message": "...", "position": { ... } }]'></textarea>
+  <textarea id="jsonInput" placeholder='{ "comments": [{ "originalCommentId": "1", "author": "...", ... }] }'></textarea>
 </div>
 
 <button class="btn btn-primary" id="importBtn">Import Comments</button>
@@ -228,30 +237,31 @@
 
 <details class="info">
   <summary>JSON format reference</summary>
-  <pre>[
-  {
-    "id": "c1",
-    "author": "Designer A",
-    "message": "Button color needs update",
-    "createdAt": "2025-01-15",
-    "resolved": false,
-    "replies": [
-      {
-        "id": "r1",
-        "author": "Developer B",
-        "message": "Fixed in latest push",
-        "createdAt": "2025-01-16"
-      }
-    ],
-    "position": {
+  <pre>{
+  "exportSessionId": "session-001",
+  "source": {
+    "fileKey": "abc123",
+    "branchName": "feature/redesign"
+  },
+  "comments": [
+    {
+      "originalCommentId": "c1",
+      "author": "Designer A",
+      "message": "Button color needs update",
       "frameName": "Login Screen",
+      "relativeX": 0.35,
+      "relativeY": 0.6,
       "absoluteX": 400,
       "absoluteY": 300,
-      "relativeX": 120,
-      "relativeY": 80
+      "thread": [
+        {
+          "author": "Developer B",
+          "message": "Fixed in latest push"
+        }
+      ]
     }
-  }
-]</pre>
+  ]
+}</pre>
 </details>
 
 <script>
@@ -290,13 +300,12 @@
     const reader = new FileReader();
     reader.onload = () => {
       fileData = reader.result;
-      fileLabel.innerHTML = '<span class="file-name">' + file.name + "</span>";
+      fileLabel.innerHTML = '<span class="file-name">' + escapeHtml(file.name) + "</span>";
       jsonInput.value = "";
     };
     reader.readAsText(file);
   }
 
-  // When user types in textarea, clear file selection
   jsonInput.addEventListener("input", () => {
     if (jsonInput.value.trim()) {
       fileData = null;
@@ -314,26 +323,35 @@
       return;
     }
 
-    let comments;
+    let payload;
     try {
-      comments = JSON.parse(raw);
+      payload = JSON.parse(raw);
     } catch (e) {
-      showStatus("error", "Invalid JSON: " + e.message);
+      showStatus("error", "유효한 JSON이 아닙니다: " + e.message);
       return;
     }
 
-    if (!Array.isArray(comments)) {
-      showStatus("error", "JSON must be an array of comment objects.");
+    // Support both { comments: [...] } and bare array
+    if (Array.isArray(payload)) {
+      payload = { comments: payload };
+    }
+
+    if (!payload.comments || !Array.isArray(payload.comments) || payload.comments.length === 0) {
+      showStatus("error", "코멘트가 없습니다 (comments 배열이 비어있거나 없습니다)");
       return;
     }
 
-    // Basic validation
+    // Quick client-side validation
     const errors = [];
-    comments.forEach((c, i) => {
-      if (!c.id) errors.push("Comment #" + (i + 1) + ": missing 'id'");
-      if (!c.message) errors.push("Comment #" + (i + 1) + ": missing 'message'");
-      if (!c.author) errors.push("Comment #" + (i + 1) + ": missing 'author'");
-      if (!c.position) errors.push("Comment #" + (i + 1) + ": missing 'position'");
+    payload.comments.forEach((c, i) => {
+      const n = i + 1;
+      if (!c.originalCommentId) errors.push("#" + n + ": missing originalCommentId");
+      if (!c.author) errors.push("#" + n + ": missing author");
+      if (!c.message) errors.push("#" + n + ": missing message");
+      if (!c.frameName) errors.push("#" + n + ": missing frameName");
+      const hasRel = c.relativeX !== undefined && c.relativeY !== undefined;
+      const hasAbs = c.absoluteX !== undefined && c.absoluteY !== undefined;
+      if (!hasRel && !hasAbs) errors.push("#" + n + ": missing coordinates");
     });
 
     if (errors.length > 0) {
@@ -346,7 +364,9 @@
     importBtn.textContent = "Importing…";
     showStatus("", "");
 
-    parent.postMessage({ pluginMessage: { type: "import-comments", comments } }, "*");
+    parent.postMessage({
+      pluginMessage: { type: "import-comments", payload: payload }
+    }, "*");
   });
 
   // ── Messages from plugin ──
@@ -358,7 +378,26 @@
     importBtn.textContent = "Import Comments";
 
     if (msg.type === "import-complete") {
-      showStatus("success", "Successfully imported " + msg.count + " comment(s) as annotations!");
+      const parts = [];
+      if (msg.placed > 0) parts.push(msg.placed + " placed");
+      if (msg.unplaced > 0) parts.push(msg.unplaced + " unplaced");
+      if (msg.failed > 0) parts.push(msg.failed + " failed");
+      const summary = parts.join(", ");
+
+      if (msg.failed > 0 || msg.unplaced > 0) {
+        let detail = summary;
+        if (msg.results) {
+          const issues = msg.results.filter(r => r.status !== "placed");
+          if (issues.length > 0) {
+            detail += "\n\n" + issues.map(r =>
+              "[" + r.status.toUpperCase() + "] " + r.originalCommentId + ": " + (r.reason || "")
+            ).join("\n");
+          }
+        }
+        showStatus("warning", "Import completed: " + detail);
+      } else {
+        showStatus("success", "Successfully imported " + msg.placed + " comment(s)!");
+      }
     } else if (msg.type === "import-error") {
       showStatus("error", "Error: " + msg.error);
     }
@@ -367,6 +406,12 @@
   function showStatus(type, text) {
     statusEl.className = "status" + (type ? " " + type : "");
     statusEl.textContent = text;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
   }
 </script>
 
