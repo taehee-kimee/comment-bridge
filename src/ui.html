@@ -311,14 +311,21 @@
     tokenToggle.textContent = isPassword ? "Hide" : "Show";
   });
 
-  exportBtn.addEventListener("click", async () => {
+  exportBtn.addEventListener("click", () => {
     const token = tokenInput.value.trim();
     if (!token) { showStatus(exportStatus, "error", "Access token을 입력해주세요."); return; }
-    if (!fileKey) { showStatus(exportStatus, "error", "File key를 가져올 수 없습니다. 파일이 저장되어 있는지 확인해주세요."); return; }
 
     exportBtn.disabled = true;
-    exportBtn.textContent = "Fetching comments…";
+    exportBtn.textContent = "Checking file…";
     showStatus(exportStatus, "", "");
+
+    // Request fresh fileKey from plugin before proceeding
+    parent.postMessage({ pluginMessage: { type: "request-filekey" } }, "*");
+  });
+
+  async function startExportFetch() {
+    const token = tokenInput.value.trim();
+    exportBtn.textContent = "Fetching comments…";
 
     // Save token if checkbox is checked
     if (saveTokenCb.checked) {
@@ -364,7 +371,7 @@
       exportBtn.disabled = false;
       exportBtn.textContent = "Export JSON";
     }
-  });
+  }
 
   // ══════════════════════════════════════════════════════════════════
   //  Messages from plugin
@@ -376,14 +383,26 @@
 
     switch (msg.type) {
       case "init":
-        fileKey = msg.fileKey || null;
+        fileKey = msg.fileKey ?? null;
         if (fileKey) {
           fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
         } else {
-          fileKeyDisplay.innerHTML = "File key: <code style='color:var(--error)'>unavailable (save file first)</code>";
+          fileKeyDisplay.innerHTML = "File key: <code style='color:var(--error)'>unavailable</code>";
         }
         if (msg.savedToken) {
           tokenInput.value = msg.savedToken;
+        }
+        break;
+
+      case "filekey-response":
+        fileKey = msg.fileKey ?? null;
+        if (fileKey) {
+          fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+          startExportFetch();
+        } else {
+          showStatus(exportStatus, "error", "File key를 가져올 수 없습니다. 플러그인을 닫고 다시 열어주세요.");
+          exportBtn.disabled = false;
+          exportBtn.textContent = "Export JSON";
         }
         break;
 
