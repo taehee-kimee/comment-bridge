@@ -108,6 +108,13 @@
   <p class="subtitle">Branch 코멘트 JSON을 포스트잇으로 재현합니다</p>
 
   <div class="section">
+    <label>이 파일에 저장된 Export</label>
+    <button class="btn-sm" id="loadSavedBtn" style="width:100%; padding:9px 12px;">저장된 export 불러오기</button>
+  </div>
+
+  <div class="divider">or</div>
+
+  <div class="section">
     <label>Upload JSON file</label>
     <div class="file-drop" id="fileDrop">
       <span id="fileLabel">Click or drag &amp; drop a .json file</span>
@@ -195,7 +202,10 @@
     </label>
   </div>
 
-  <button class="btn btn-primary" id="exportBtn">Export JSON</button>
+  <div style="display:flex; gap:8px;">
+    <button class="btn btn-primary" id="exportBtn" style="flex:1;">Export JSON</button>
+    <button class="btn-sm" id="saveToFileBtn" style="display:none; padding:10px 14px;" title="Figma 파일에 저장">파일에 저장</button>
+  </div>
   <div class="status" id="exportStatus"></div>
 
   <details class="info">
@@ -233,7 +243,13 @@
   const saveTokenCb = document.getElementById("saveToken");
   const includeResolvedCb = document.getElementById("includeResolved");
   const exportBtn = document.getElementById("exportBtn");
+  const saveToFileBtn = document.getElementById("saveToFileBtn");
   const exportStatus = document.getElementById("exportStatus");
+
+  // Import
+  const loadSavedBtn = document.getElementById("loadSavedBtn");
+
+  let lastExportJson = null;
 
   // ── Tab switching ──
   tabBtns.forEach((btn) => {
@@ -248,6 +264,12 @@
   // ══════════════════════════════════════════════════════════════════
   //  IMPORT
   // ══════════════════════════════════════════════════════════════════
+
+  loadSavedBtn.addEventListener("click", () => {
+    parent.postMessage({ pluginMessage: { type: "load-export" } }, "*");
+    loadSavedBtn.textContent = "불러오는 중…";
+    loadSavedBtn.disabled = true;
+  });
 
   fileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -318,6 +340,13 @@
   // ══════════════════════════════════════════════════════════════════
   //  EXPORT
   // ══════════════════════════════════════════════════════════════════
+
+  saveToFileBtn.addEventListener("click", () => {
+    if (!lastExportJson) return;
+    parent.postMessage({ pluginMessage: { type: "save-export", json: lastExportJson } }, "*");
+    saveToFileBtn.disabled = true;
+    saveToFileBtn.textContent = "저장 중…";
+  });
 
   tokenToggle.addEventListener("click", () => {
     const isPassword = tokenInput.type === "password";
@@ -528,8 +557,28 @@
       case "export-ready":
         exportBtn.disabled = false;
         exportBtn.textContent = "Export JSON";
+        lastExportJson = msg.json;
+        saveToFileBtn.style.display = "block";
+        saveToFileBtn.disabled = false;
+        saveToFileBtn.textContent = "파일에 저장";
         downloadJson(msg.json, msg.filename);
         showStatus(exportStatus, "success", "Export 완료! " + msg.filename + " 다운로드가 시작됩니다.");
+        break;
+
+      case "export-saved":
+        saveToFileBtn.textContent = "저장됨 ✓";
+        showStatus(exportStatus, "success", "이 Figma 파일에 export가 저장되었습니다.\nImport 탭에서 바로 불러올 수 있습니다.");
+        break;
+
+      case "export-load-result":
+        loadSavedBtn.textContent = "저장된 export 불러오기";
+        loadSavedBtn.disabled = false;
+        if (msg.json) {
+          document.getElementById("jsonInput").value = msg.json;
+          showStatus(importStatus, "success", "저장된 export를 불러왔습니다. Import 버튼을 눌러 적용하세요.");
+        } else {
+          showStatus(importStatus, "warning", "저장된 export가 없습니다.\nExport 탭에서 먼저 export 후 '파일에 저장'을 눌러주세요.");
+        }
         break;
 
       case "export-error":
