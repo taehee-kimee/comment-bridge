@@ -26,6 +26,7 @@
   var GROUP_FRAME_NAME = "\u{1F5D2} Imported Comments (MVP)";
   var UNPLACED_SECTION_NAME = "\u{1F4CC} Unplaced";
   var TOKEN_STORAGE_KEY = "figmaToken";
+  var EXPORT_DATA_KEY = "savedExport";
   var COLORS = {
     bg: { r: 1, g: 0.96, b: 0.75 },
     shadow: { r: 0, g: 0, b: 0, a: 0.12 },
@@ -84,6 +85,15 @@
           fileKey: figma.fileKey
         });
         break;
+      case "save-export":
+        figma.root.setPluginData(EXPORT_DATA_KEY, msg.json);
+        sendToUI({ type: "export-saved" });
+        break;
+      case "load-export": {
+        const saved = figma.root.getPluginData(EXPORT_DATA_KEY);
+        sendToUI({ type: "export-load-result", json: saved || null });
+        break;
+      }
     }
   };
   function sendToUI(msg) {
@@ -168,7 +178,6 @@
     if (!c.originalCommentId) return "missing originalCommentId";
     if (!c.author) return "missing author";
     if (!c.message) return "missing message";
-    if (!c.frameName) return "missing frameName";
     const hasRelative = c.relativeX !== void 0 && c.relativeY !== void 0;
     const hasAbsolute = c.absoluteX !== void 0 && c.absoluteY !== void 0;
     if (!hasRelative && !hasAbsolute)
