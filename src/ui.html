@@ -87,8 +87,9 @@
   .btn-sm:hover { border-color: var(--primary); color: var(--primary); }
   .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer; margin-top: 8px; }
   .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
-  .file-key-display { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; word-break: break-all; }
+  .file-key-display { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; word-break: break-all; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .file-key-display code { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+  .file-key-display .change-btn { flex-shrink: 0; font-size: 10px; padding: 2px 7px; }
 </style>
 </head>
 <body>
@@ -159,7 +160,7 @@
   <p class="subtitle">Branch 코멘트를 JSON 파일로 내보냅니다</p>
 
   <div class="file-key-display" id="fileKeyDisplay">
-    File key: <code>loading…</code>
+    <span>File key: <code>loading…</code></span>
   </div>
 
   <div id="fileKeyManualSection" style="display:none; margin-bottom:12px;">
@@ -338,9 +339,19 @@
     return null;
   }
 
+  function setFileKeyDisplay(html, canChange) {
+    fileKeyDisplay.innerHTML = "<span>" + html + "</span>" +
+      (canChange ? "<button class='btn-sm change-btn' id='changeKeyBtn'>변경</button>" : "");
+    if (canChange) {
+      document.getElementById("changeKeyBtn").addEventListener("click", () => {
+        document.getElementById("fileKeyManualSection").style.display = "block";
+      });
+    }
+  }
+
   function applyFileKey(key) {
     fileKey = key;
-    fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+    setFileKeyDisplay("File key: <code>" + escapeHtml(key) + "</code>", true);
     document.getElementById("fileKeyManualSection").style.display = "none";
   }
 
@@ -375,9 +386,8 @@
     // Use manually entered file key if provided
     const manualKey = document.getElementById("fileKeyManualInput").value.trim();
     if (manualKey) {
-      const parsed = parseFigmaFileKey(manualKey) ?? manualKey;
-      fileKey = parsed;
-      fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+      fileKey = parseFigmaFileKey(manualKey) ?? manualKey;
+      setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
       document.getElementById("fileKeyManualSection").style.display = "none";
     }
 
@@ -456,11 +466,11 @@
       case "init":
         fileKey = msg.fileKey ?? null;
         if (fileKey) {
-          fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+          setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
         } else {
           // fileKey not ready yet at init — request a fresh one, will show manual input if still unavailable
           parent.postMessage({ pluginMessage: { type: "request-filekey" } }, "*");
-          fileKeyDisplay.innerHTML = "File key: <code>detecting…</code>";
+          setFileKeyDisplay("File key: <code>detecting…</code>", false);
         }
         if (msg.savedToken) {
           tokenInput.value = msg.savedToken;
@@ -470,13 +480,13 @@
       case "filekey-response":
         fileKey = msg.fileKey ?? null;
         if (fileKey) {
-          fileKeyDisplay.innerHTML = "File key: <code>" + escapeHtml(fileKey) + "</code>";
+          setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
           document.getElementById("fileKeyManualSection").style.display = "none";
           if (exportBtn.disabled) {
             startExportFetch();
           }
         } else {
-          fileKeyDisplay.innerHTML = "File key: <code style='color:var(--error)'>unavailable</code>";
+          setFileKeyDisplay("File key: <code style='color:var(--error)'>unavailable</code>", false);
           document.getElementById("fileKeyManualSection").style.display = "block";
           if (exportBtn.disabled) {
             showStatus(exportStatus, "warning", "File key를 자동으로 가져올 수 없습니다.\nFigma URL에서 file key를 아래에 직접 입력 후 다시 Export를 눌러주세요.");
