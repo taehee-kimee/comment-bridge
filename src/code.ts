@@ -125,28 +125,18 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
     }
 
     case "navigate-to-comment": {
-      console.log("[Comment Bridge] navigate-to-comment:", msg.commentId, "| map size:", commentNodeMap.size);
+      console.log("[Comment Bridge] navigate received:", msg.commentId, "| cache size:", commentNodeMap.size);
       let targetNode: BaseNode | null = null;
 
       // Fast path: in-memory cache
       const cachedNodeId = commentNodeMap.get(msg.commentId);
       if (cachedNodeId) {
         targetNode = figma.getNodeById(cachedNodeId);
-        console.log("[Comment Bridge] cache hit:", cachedNodeId, "| found:", !!targetNode);
-      }
-
-      // Slow fallback: search all pages
-      if (!targetNode) {
-        console.log("[Comment Bridge] cache miss, searching all pages…");
-        for (const page of figma.root.children) {
-          const found = page.findOne(
-            (n) => n.getPluginData("originalCommentId") === msg.commentId
-          );
-          if (found) {
-            targetNode = found;
-            commentNodeMap.set(msg.commentId, found.id);
-            break;
-          }
+        if (!targetNode) {
+          // Node was deleted — clean up cache and notify immediately
+          commentNodeMap.delete(msg.commentId);
+          figma.notify("포스트잇이 삭제되었습니다.", { error: true });
+          break;
         }
       }
 
@@ -156,7 +146,7 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         figma.currentPage.selection = [targetNode as SceneNode];
         figma.viewport.scrollAndZoomIntoView([targetNode as SceneNode]);
       } else {
-        figma.notify("해당 코멘트를 찾을 수 없습니다. 먼저 Import를 실행해주세요.", { error: true });
+        figma.notify("먼저 Import를 실행해주세요.", { error: true });
       }
       break;
     }
@@ -199,24 +189,35 @@ async function importComments(payload: ImportPayload): Promise<void> {
   const results: CommentResult[] = [];
   let lastGroup: FrameNode | null = null;
   let lastPage: PageNode | null = null;
+  const totalComments = payload.comments.length;
+  let processedComments = 0;
 
   // 3. 각 페이지별로 처리
-  const pageEntries = [...commentsByPage.entries()];
-  const totalPages = pageEntries.length;
-  let pageIdx = 0;
-
-  for (const [pageName, comments] of pageEntries) {
-    pageIdx++;
-    sendToUI({ type: "import-progress", current: pageIdx, total: totalPages, pageName: pageName || "unknown" });
-
+  for (const [pageName, comments] of commentsByPage) {
     const targetPage = pageMap.get(pageName) ?? figma.currentPage;
-    const needsFrameIndex = comments.some((c) => c.frameName && c.frameName.length > 0);
+    // Only build frame index if comments have frameName AND lack absoluteX/Y
+    const needsFrameIndex = comments.some(
+      (c) => c.frameName && c.frameName.length > 0 && c.absoluteX === undefined && c.absoluteY === undefined
+    );
     const frameIndex = needsFrameIndex ? buildFrameIndex(targetPage) : new Map<string, SceneNode[]>();
 
     const placedNodes: { node: FrameNode; x: number; y: number }[] = [];
     const unplacedNodes: FrameNode[] = [];
 
     for (const comment of comments) {
+      processedComments++;
+
+      // Send progress every 5 comments + yield to let UI update
+      if (processedComments % 5 === 1 || processedComments === totalComments) {
+        sendToUI({
+          type: "import-progress",
+          current: processedComments,
+          total: totalComments,
+          pageName: pageName || "unknown",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
       const fail = validateImportComment(comment);
       if (fail) {
         results.push({
@@ -548,12 +549,10 @@ function resolveExportPosition(
         pageName: apiPos.pageName,
         frameName: apiPos.frameName,
         nodeId: meta.node_id,
-        relativeX: apiPos.width > 0
-          ? (meta.node_offset?.x ?? 0) / apiPos.width
-          : undefined,
-        relativeY: apiPos.height > 0
-          ? (meta.node_offset?.y ?? 0) / apiPos.height
-          : undefined,
+        // relativeX/Y 생략: REST API에서는 top-level frame 정보가 없어
+        // 정확한 상대좌표 계산 불가. absoluteX/Y로 배치.
+        relativeX: undefined,
+        relativeY: undefined,
         absoluteX: Math.round(commentX),
         absoluteY: Math.round(commentY),
       };

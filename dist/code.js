@@ -115,24 +115,15 @@
           break;
         }
         case "navigate-to-comment": {
-          console.log("[Comment Bridge] navigate-to-comment:", msg.commentId, "| map size:", commentNodeMap.size);
+          console.log("[Comment Bridge] navigate received:", msg.commentId, "| cache size:", commentNodeMap.size);
           let targetNode = null;
           const cachedNodeId = commentNodeMap.get(msg.commentId);
           if (cachedNodeId) {
             targetNode = figma.getNodeById(cachedNodeId);
-            console.log("[Comment Bridge] cache hit:", cachedNodeId, "| found:", !!targetNode);
-          }
-          if (!targetNode) {
-            console.log("[Comment Bridge] cache miss, searching all pages\u2026");
-            for (const page of figma.root.children) {
-              const found = page.findOne(
-                (n) => n.getPluginData("originalCommentId") === msg.commentId
-              );
-              if (found) {
-                targetNode = found;
-                commentNodeMap.set(msg.commentId, found.id);
-                break;
-              }
+            if (!targetNode) {
+              commentNodeMap.delete(msg.commentId);
+              figma.notify("\uD3EC\uC2A4\uD2B8\uC787\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", { error: true });
+              break;
             }
           }
           if (targetNode) {
@@ -141,7 +132,7 @@
             figma.currentPage.selection = [targetNode];
             figma.viewport.scrollAndZoomIntoView([targetNode]);
           } else {
-            figma.notify("\uD574\uB2F9 \uCF54\uBA58\uD2B8\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 Import\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.", { error: true });
+            figma.notify("\uBA3C\uC800 Import\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.", { error: true });
           }
           break;
         }
@@ -174,18 +165,27 @@
     const results = [];
     let lastGroup = null;
     let lastPage = null;
-    const pageEntries = [...commentsByPage.entries()];
-    const totalPages = pageEntries.length;
-    let pageIdx = 0;
-    for (const [pageName, comments] of pageEntries) {
-      pageIdx++;
-      sendToUI({ type: "import-progress", current: pageIdx, total: totalPages, pageName: pageName || "unknown" });
+    const totalComments = payload.comments.length;
+    let processedComments = 0;
+    for (const [pageName, comments] of commentsByPage) {
       const targetPage = (_b = pageMap.get(pageName)) != null ? _b : figma.currentPage;
-      const needsFrameIndex = comments.some((c) => c.frameName && c.frameName.length > 0);
+      const needsFrameIndex = comments.some(
+        (c) => c.frameName && c.frameName.length > 0 && c.absoluteX === void 0 && c.absoluteY === void 0
+      );
       const frameIndex = needsFrameIndex ? buildFrameIndex(targetPage) : /* @__PURE__ */ new Map();
       const placedNodes = [];
       const unplacedNodes = [];
       for (const comment of comments) {
+        processedComments++;
+        if (processedComments % 5 === 1 || processedComments === totalComments) {
+          sendToUI({
+            type: "import-progress",
+            current: processedComments,
+            total: totalComments,
+            pageName: pageName || "unknown"
+          });
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
         const fail = validateImportComment(comment);
         if (fail) {
           results.push({
@@ -389,7 +389,7 @@
     };
   }
   function resolveExportPosition(meta, nodePositions) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
     if (meta.node_id) {
       const node = figma.getNodeById(meta.node_id);
       if (node && "absoluteTransform" in node) {
@@ -428,8 +428,10 @@
           pageName: apiPos.pageName,
           frameName: apiPos.frameName,
           nodeId: meta.node_id,
-          relativeX: apiPos.width > 0 ? ((_l = (_k = meta.node_offset) == null ? void 0 : _k.x) != null ? _l : 0) / apiPos.width : void 0,
-          relativeY: apiPos.height > 0 ? ((_n = (_m = meta.node_offset) == null ? void 0 : _m.y) != null ? _n : 0) / apiPos.height : void 0,
+          // relativeX/Y 생략: REST API에서는 top-level frame 정보가 없어
+          // 정확한 상대좌표 계산 불가. absoluteX/Y로 배치.
+          relativeX: void 0,
+          relativeY: void 0,
           absoluteX: Math.round(commentX),
           absoluteY: Math.round(commentY)
         };
@@ -438,8 +440,8 @@
     return {
       pageName: "",
       frameName: "",
-      absoluteX: Math.round((_o = meta.x) != null ? _o : 0),
-      absoluteY: Math.round((_p = meta.y) != null ? _p : 0)
+      absoluteX: Math.round((_k = meta.x) != null ? _k : 0),
+      absoluteY: Math.round((_l = meta.y) != null ? _l : 0)
     };
   }
   function findTopLevelFrame(node) {
