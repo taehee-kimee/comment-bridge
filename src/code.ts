@@ -458,14 +458,16 @@ function processExport(
     const thread = (repliesMap.get(c.id) ?? []).map((r) => ({
       author: r.user.handle,
       message: r.message,
+      createdAt: r.created_at,
     }));
 
     comments.push({
       originalCommentId: c.id,
       author: c.user.handle,
       message: c.message,
+      createdAt: c.created_at,
       thread,
-      isResolved: c.resolved_at !== null,
+      isResolved: c.resolved_at !== null && c.resolved_at !== undefined,
       ...pos,
     });
   }

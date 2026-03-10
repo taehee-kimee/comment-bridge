@@ -367,14 +367,16 @@
       const pos = resolveExportPosition(c.client_meta, nodePositions);
       const thread = ((_b = repliesMap.get(c.id)) != null ? _b : []).map((r) => ({
         author: r.user.handle,
-        message: r.message
+        message: r.message,
+        createdAt: r.created_at
       }));
       comments.push(__spreadValues({
         originalCommentId: c.id,
         author: c.user.handle,
         message: c.message,
+        createdAt: c.created_at,
         thread,
-        isResolved: c.resolved_at !== null
+        isResolved: c.resolved_at !== null && c.resolved_at !== void 0
       }, pos));
     }
     const docName = (_c = figma.root.name) != null ? _c : "unknown";

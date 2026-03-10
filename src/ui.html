@@ -3,238 +3,654 @@
 <head>
 <meta charset="UTF-8" />
 <style>
-  :root {
-    --bg: #ffffff;
-    --surface: #f5f5f5;
-    --border: #e0e0e0;
-    --text: #333333;
-    --text-secondary: #777777;
-    --primary: #5b5bf7;
-    --primary-hover: #4a4ae0;
-    --success: #2e9e5a;
-    --warning: #c88a1a;
-    --error: #d94444;
-    --radius: 8px;
-  }
+  /* ── Reset & Base ── */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-family: Inter, system-ui, -apple-system, 'Noto Sans KR', sans-serif;
     font-size: 13px;
-    color: var(--text);
-    background: var(--bg);
-    padding: 0;
+    color: #333;
+    background: #fff;
     line-height: 1.5;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
-
-  /* ── Page switching ── */
-  .page { display: none; }
-  .page.active { display: block; }
 
   /* ── Header ── */
   .header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    height: 40px;
+    padding: 0 16px;
+    background: #2c2c2c;
+    flex-shrink: 0;
   }
-  .header h1 { font-size: 14px; font-weight: 700; }
-  .header-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 5px 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text-secondary);
-    transition: border-color 0.2s, color 0.2s;
-    line-height: 1;
+  .header-icon {
+    width: 20px; height: 20px;
+    background: #0d99ff;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
   }
-  .header-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-  /* ── Content ── */
-  .content { padding: 20px; }
-
-  /* ── Shared ── */
-  h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-  .subtitle { color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; }
-  .section { margin-bottom: 16px; }
-  label { display: block; font-weight: 600; font-size: 11px; margin-bottom: 6px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-  .btn { width: 100%; padding: 10px 16px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
-  .btn-primary { background: var(--primary); color: #fff; }
-  .btn-primary:hover { background: var(--primary-hover); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .status { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius); font-size: 12px; display: none; white-space: pre-wrap; }
-  .status.success { display: block; background: rgba(46,158,90,.1); color: var(--success); border: 1px solid rgba(46,158,90,.2); }
-  .status.warning { display: block; background: rgba(200,138,26,.08); color: var(--warning); border: 1px solid rgba(200,138,26,.15); }
-  .status.error { display: block; background: rgba(217,68,68,.08); color: var(--error); border: 1px solid rgba(217,68,68,.15); }
-
-  /* ── Section divider ── */
-  .section-divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 20px 0;
-  }
-
-  /* ── Comment list ── */
-  .comment-list { margin-top: 8px; max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-  .comment-item { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; line-height: 1.4; cursor: pointer; transition: background 0.15s; }
-  .comment-item:hover { background: var(--surface); }
-  .comment-item:last-child { border-bottom: none; }
-  .comment-item .comment-author { font-weight: 600; color: var(--text); }
-  .comment-item .comment-page { font-size: 11px; color: var(--text-secondary); margin-left: 4px; }
-  .comment-item .comment-message { color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .comment-count { font-size: 13px; font-weight: 600; color: var(--success); margin-bottom: 4px; }
-
-  /* ── Progress bar ── */
-  .progress-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 8px; overflow: hidden; }
-  .progress-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s ease; }
-
-  /* ── Export details ── */
-  .export-details { margin-top: 0; }
-  .export-details summary {
-    cursor: pointer;
-    font-weight: 600;
+  .header-icon svg { width: 12px; height: 12px; }
+  .header-title {
     font-size: 13px;
-    color: var(--text-secondary);
-    padding: 4px 0;
-    list-style: none;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.325px;
   }
-  .export-details summary::before { content: "▸ "; }
-  .export-details[open] summary::before { content: "▾ "; }
-  .export-details summary:hover { color: var(--text); }
-  .export-details .export-inner { padding-top: 12px; }
-
-  /* ── Empty state ── */
-  .empty-state {
-    text-align: center;
-    padding: 16px;
-    color: var(--text-secondary);
-    font-size: 12px;
+  .header-version {
+    font-size: 10px;
+    color: #888;
+    margin-left: 8px;
   }
 
-  /* ── Text link ── */
-  .text-link {
+  /* ── Tab Bar ── */
+  .tab-bar {
+    display: flex;
+    height: 39px;
+    background: #fafafa;
+    border-bottom: 1px solid #e5e5e5;
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: none;
     border: none;
-    color: var(--text-secondary);
-    font-size: 11px;
     cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: #999;
+    position: relative;
+    transition: color 0.15s;
   }
-  .text-link:hover { color: var(--primary); }
+  .tab-btn:hover { color: #666; }
+  .tab-btn.active { font-weight: 600; color: #333; }
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 12px;
+    right: 12px;
+    height: 2px;
+    background: #333;
+    border-radius: 1px 1px 0 0;
+  }
+  .tab-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 
-  /* ── Settings ── */
-  .settings-row { display: flex; gap: 8px; }
-  .settings-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; outline: none; background: var(--surface); color: var(--text); font-family: "SF Mono","Fira Code",monospace; }
-  .settings-row input:focus { border-color: var(--primary); }
-  .btn-sm { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text-secondary); }
-  .btn-sm:hover { border-color: var(--primary); color: var(--primary); }
-  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer; margin-top: 8px; }
-  .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
-  .info { margin-top: 16px; padding: 10px 12px; background: var(--surface); border-radius: var(--radius); font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
-  .info summary { cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
-  .setting-value { font-size: 11px; color: var(--text-secondary); word-break: break-all; margin-top: 4px; }
-  .setting-value code { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
-  .setting-value .set { color: var(--success); }
-  .setting-value .unset { color: var(--error); }
+  /* ── Tab Content ── */
+  .tab-content { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
+  .tab-content.active { display: flex; }
+
+  /* ── Status Bar (Export) ── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    height: 45px;
+    padding: 0 16px;
+    border-bottom: 1px solid #e5e5e5;
+    flex-shrink: 0;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.unresolved { background: #f24822; }
+  .status-dot.resolved { background: #14ae5c; }
+  .status-label {
+    font-size: 11px;
+    color: #666;
+    margin-left: 6px;
+    margin-right: 14px;
+  }
+  .fetch-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    color: #0d99ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .fetch-btn:hover { background: rgba(13,153,255,0.08); }
+  .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .fetch-btn svg { width: 12px; height: 12px; }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    height: 41px;
+    padding: 0 16px;
+    border-bottom: 1px solid #e5e5e5;
+    flex-shrink: 0;
+  }
+  .filter-icon { margin-right: 8px; color: #999; }
+  .filter-icon svg { width: 12px; height: 12px; }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: none;
+    background: none;
+    font-size: 11px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .filter-chip:hover { background: #f0f0f0; }
+  .filter-chip.active { background: #333; color: #fff; }
+  .filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+  }
+  .filter-toggle input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    accent-color: #333;
+    margin: 0;
+    cursor: pointer;
+  }
+  .filter-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: #b3b3b3;
+  }
+
+  /* ── Comment List ── */
+  .comment-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px 6px 8px;
+  }
+  .comment-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .comment-card {
+    background: #fff;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .comment-card:hover { border-color: #e5e5e5; background: #fafafa; }
+  .comment-card-inner {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* Avatar */
+  .avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  /* Card Content */
+  .card-content { flex: 1; min-width: 0; }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .card-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-status-icon { flex-shrink: 0; width: 13px; height: 13px; }
+  .card-message {
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    line-height: 16.8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 19px;
+  }
+  .card-tag {
+    display: inline-block;
+    background: #f0f0f0;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 500;
+    color: #999;
+    white-space: nowrap;
+  }
+  .card-replies {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 8px;
+    font-size: 10px;
+    font-weight: 500;
+    color: #999;
+  }
+  .card-tag-page {
+    background: #e8f0fe;
+    color: #5a7fba;
+  }
+  .card-replies svg { width: 10px; height: 10px; }
+  .card-thread {
+    margin-top: 4px;
+    padding: 6px 8px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    border-left: 2px solid #ddd;
+    margin-bottom: 4px;
+  }
+  .card-thread-item {
+    font-size: 11px;
+    line-height: 15px;
+    color: #666;
+    margin-bottom: 2px;
+  }
+  .card-thread-item:last-child { margin-bottom: 0; }
+  .card-thread-author {
+    font-weight: 600;
+    color: #555;
+    margin-right: 4px;
+  }
+  .card-thread-more {
+    font-size: 10px;
+    color: #999;
+    margin-top: 2px;
+  }
+  .card-time {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 500;
+    color: #b3b3b3;
+    white-space: nowrap;
+    display: none;
+  }
+
+  /* ── Bottom Action Bar ── */
+  .action-bar {
+    padding: 13px 16px;
+    border-top: 1px solid #e5e5e5;
+    flex-shrink: 0;
+  }
+  .action-btn {
+    width: 100%;
+    height: 36px;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .action-btn:hover { background: #444; }
+  .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .action-btn.primary { background: #0d99ff; }
+  .action-btn.primary:hover { background: #0b87e3; }
+  .action-btn svg { width: 14px; height: 14px; }
+
+  /* ── Import Tab ── */
+  .import-ready {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .import-status-bar {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    flex-shrink: 0;
+  }
+  .import-status-bar span { color: #0d99ff; }
+  .import-status-bar .fetch-btn { margin-left: auto; }
+
+  /* ── Settings Tab ── */
+  .settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .setting-group {
+    margin-bottom: 16px;
+  }
+  .setting-label {
+    display: block;
+    font-weight: 600;
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .setting-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    font-size: 12px;
+    background: #fafafa;
+    color: #333;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .setting-input:focus { border-color: #0d99ff; }
+  .setting-row {
+    display: flex;
+    gap: 8px;
+  }
+  .setting-row .setting-input { flex: 1; }
+  .setting-btn-sm {
+    padding: 8px 12px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #999;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .setting-btn-sm:hover { border-color: #0d99ff; color: #0d99ff; }
+  .setting-hint {
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+  }
+  .setting-hint code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+  .setting-hint strong { color: #0d99ff; }
+  .setting-value {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .setting-value code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+  .setting-value .set { color: #14ae5c; }
+  .setting-value .unset { color: #f24822; }
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .checkbox-label input[type="checkbox"] { width: 14px; height: 14px; accent-color: #333; }
+  .setting-info {
+    margin-top: 16px;
+    padding: 10px 12px;
+    background: #fafafa;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #999;
+    line-height: 1.6;
+  }
+  .setting-info summary { cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #666; }
+
+  /* ── Status / Progress ── */
+  .status-msg {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin: 8px 16px;
+    display: none;
+    white-space: pre-wrap;
+    flex-shrink: 0;
+  }
+  .status-msg.success { display: block; background: rgba(20,174,92,0.08); color: #14ae5c; border: 1px solid rgba(20,174,92,0.15); }
+  .status-msg.warning { display: block; background: rgba(200,138,26,0.08); color: #c88a1a; border: 1px solid rgba(200,138,26,0.15); }
+  .status-msg.error { display: block; background: rgba(242,72,34,0.08); color: #f24822; border: 1px solid rgba(242,72,34,0.15); }
+
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: #e5e5e5;
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: #0d99ff;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    color: #b3b3b3;
+  }
+  .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-size: 12px; line-height: 1.6; }
+  .empty-state .empty-title { font-size: 13px; font-weight: 600; color: #999; margin-bottom: 4px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #ccc; }
 </style>
 </head>
 <body>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- MAIN PAGE -->
+<!-- HEADER -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<div id="page-main" class="page active">
-  <div class="header">
-    <h1>Comment Bridge</h1>
-    <button class="header-btn" id="openSettingsBtn" title="Settings">&#9881;</button>
+<div class="header">
+  <div class="header-icon">
+    <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 3.5C2 2.67 2.67 2 3.5 2H6v3.5H3.5C2.67 5.5 2 4.83 2 4V3.5Z" fill="white" opacity="0.8"/>
+      <path d="M6 2h2.5C9.33 2 10 2.67 10 3.5V4c0 .83-.67 1.5-1.5 1.5H6V2Z" fill="white" opacity="0.6"/>
+      <path d="M6 5.5h2.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5H6V5.5Z" fill="white" opacity="0.4"/>
+      <path d="M2 7c0-.83.67-1.5 1.5-1.5H6V10H3.5C2.67 10 2 9.33 2 8.5V7Z" fill="white" opacity="0.6"/>
+    </svg>
+  </div>
+  <span class="header-title">Comment Bridge</span>
+  <span class="header-version">v0.0.1</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TAB BAR -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="import">
+    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7 11.375v-7m0 0l2.625 2.625M7 4.375L4.375 7M2.625 1.75h8.75" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Import
+  </button>
+  <button class="tab-btn" data-tab="export">
+    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7 1.75v7m0 0L4.375 6.125M7 8.75l2.625-2.625M2.625 11.375h8.75" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Export
+  </button>
+  <button class="tab-btn" data-tab="settings">
+    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="7" cy="7" r="1.75" stroke="currentColor" stroke-width="1.2"/>
+      <path d="M7 1.5v1.25M7 11.25V12.5M12.5 7h-1.25M2.75 7H1.5M10.89 3.11l-.88.88M4 10l-.88.88M10.89 10.89l-.88-.88M4 4l-.88-.88" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    Settings
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- EXPORT TAB -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-export" class="tab-content">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <label class="filter-toggle">
+      <input type="checkbox" id="includeResolved" checked />
+      <span>Include resolved</span>
+    </label>
+    <button class="fetch-btn" id="fetchBtn">
+      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 6 A 4 4 0 1 1 6 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+        <path d="M10 2v2.5H7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Fetch
+    </button>
   </div>
 
-  <div class="content">
-    <!-- IMPORT SECTION (shown when savedExport exists) -->
-    <div id="importSection" style="display:none;">
-      <div id="importReady"></div>
-      <div id="importPreview"></div>
-      <button class="btn btn-primary" id="importBtn" style="margin-top:12px;">Import Now</button>
-      <div class="status" id="importStatus"></div>
-    </div>
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <span class="filter-icon">
+      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M1.5 2.5h9L7 6.5v3l-2 1v-4L1.5 2.5z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <button class="filter-chip active" data-filter="all">All</button>
+    <button class="filter-chip" data-filter="unresolved">Unresolved</button>
+    <button class="filter-chip" data-filter="resolved">Resolved</button>
+    <span class="filter-count" id="commentCount">0 comments</span>
+  </div>
 
-    <hr class="section-divider" id="sectionDivider" style="display:none;" />
+  <!-- Status Messages -->
+  <div class="status-msg" id="exportStatus"></div>
 
-    <!-- EXPORT SECTION -->
-    <div id="exportSectionOpen">
-      <h2>Export Comments</h2>
-      <p class="subtitle">현재 파일의 코멘트를 JSON으로 내보냅니다</p>
-      <div class="section">
-        <label class="checkbox-label">
-          <input type="checkbox" id="includeResolved" /> Include resolved comments
-        </label>
+  <!-- Comment List -->
+  <div class="comment-scroll" id="exportCommentScroll">
+    <div class="comment-cards" id="exportCommentCards">
+      <div class="empty-state" id="exportEmpty">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="8" width="32" height="24" rx="4" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 16h16M12 22h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="empty-title">No comments yet</p>
+        <p>Press Fetch to load comments</p>
       </div>
-      <button class="btn btn-primary" id="exportBtn">Export</button>
-      <div class="status" id="exportStatus"></div>
-      <div id="exportList"></div>
-      <button class="btn-sm" id="downloadBtn" style="display:none; width:100%; margin-top:6px;">JSON으로 다운로드</button>
     </div>
+  </div>
 
-    <details class="export-details" id="exportSectionCollapsed" style="display:none;">
-      <summary>Export Comments</summary>
-      <div class="export-inner">
-        <div class="section">
-          <label class="checkbox-label">
-            <input type="checkbox" id="includeResolvedCollapsed" /> Include resolved comments
-          </label>
-        </div>
-        <button class="btn btn-primary" id="exportBtnCollapsed">Export</button>
-        <div class="status" id="exportStatusCollapsed"></div>
-        <div id="exportListCollapsed"></div>
-        <button class="btn-sm" id="downloadBtnCollapsed" style="display:none; width:100%; margin-top:6px;">JSON으로 다운로드</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- IMPORT TAB -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-import" class="tab-content active">
+  <!-- Status Messages -->
+  <div class="status-msg" id="importStatus"></div>
+
+  <!-- Status bar -->
+  <div class="import-status-bar">
+    <span id="importStatusLabel">No comment data</span>
+    <button class="fetch-btn" id="importFetchBtn">
+      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 6 A 4 4 0 1 1 6 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+        <path d="M10 2v2.5H7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Fetch
+    </button>
+  </div>
+
+  <!-- Comment list -->
+  <div class="comment-scroll" id="importCommentScroll">
+    <div class="comment-cards" id="importCommentCards">
+      <div class="empty-state" id="importEmpty">
+        <p style="color:#b3b3b3;font-size:12px;">Press Fetch to load comments</p>
       </div>
-    </details>
-
-    <!-- Footer: refresh link -->
-    <div style="text-align:center; margin-top:16px;">
-      <button class="text-link" id="refreshSavedBtn">저장된 export 새로고침 ↻</button>
     </div>
+  </div>
+
+  <!-- Bottom Action -->
+  <div class="action-bar" id="importActionBar" style="display:none;">
+    <button class="action-btn primary" id="importBtn">
+      <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 11.375v-7m0 0l2.625 2.625M7 4.375L4.375 7M2.625 1.75h8.75" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Import Now
+    </button>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- SETTINGS PAGE -->
+<!-- SETTINGS TAB -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<div id="page-settings" class="page">
-  <div class="header">
-    <button class="header-btn" id="backBtn" title="Back">&#8592; Back</button>
-    <h1>Settings</h1>
-    <span></span>
-  </div>
-
-  <div class="content">
-    <div class="section">
-      <label>File Key</label>
-      <input type="text" id="fileKeyInput"
-        placeholder="Figma URL을 붙여넣거나 file key 직접 입력"
-        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;outline:none;background:var(--surface);color:var(--text);font-family:'SF Mono','Fira Code',monospace;" />
-      <p style="font-size:11px;color:var(--text-secondary);margin-top:4px;">
-        브랜치: <code>figma.com/design/{key}/…?branch-file-key=<strong style="color:var(--primary)">branch-key</strong></code>
+<div id="tab-settings" class="tab-content">
+  <div class="settings-content">
+    <div class="setting-group">
+      <label class="setting-label">File Key</label>
+      <input class="setting-input" type="text" id="fileKeyInput"
+        placeholder="Figma URL or file key" />
+      <p class="setting-hint" style="margin-top:4px;">
+        Branch: <code>figma.com/design/{key}/...?branch-file-key=<strong>branch-key</strong></code>
       </p>
       <div class="setting-value" id="fileKeyStatus"></div>
     </div>
 
-    <div class="section">
-      <label>Figma Access Token</label>
-      <div class="settings-row">
-        <input type="password" id="tokenInput" placeholder="Personal access token" />
-        <button class="btn-sm" id="tokenToggle">Show</button>
+    <div class="setting-group">
+      <label class="setting-label">Figma Access Token</label>
+      <div class="setting-row">
+        <input class="setting-input" type="password" id="tokenInput" placeholder="Personal access token" />
+        <button class="setting-btn-sm" id="tokenToggle">Show</button>
       </div>
       <label class="checkbox-label">
         <input type="checkbox" id="saveToken" checked /> Remember token
       </label>
     </div>
 
-    <details class="info">
+    <details class="setting-info">
       <summary>How to get a token</summary>
       <p style="margin-top:6px;">
         1. Go to <strong>figma.com/settings</strong><br>
@@ -243,6 +659,18 @@
         4. Copy and paste it above
       </p>
     </details>
+
+    <div class="status-msg" id="settingsStatus"></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="action-btn" id="saveSettingsBtn">
+      <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.375 12.25H2.625a.875.875 0 01-.875-.875V2.625a.875.875 0 01.875-.875h6.563l3.062 3.063v6.562a.875.875 0 01-.875.875z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9.625 12.25V7.875h-5.25v4.375M4.375 1.75v3.063h4.375" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Save Settings
+    </button>
   </div>
 </div>
 
@@ -250,9 +678,6 @@
   // ── Global error handler ──
   window.onerror = function(msg, src, line, col, err) {
     console.error("[Comment Bridge] GLOBAL ERROR:", msg, "| line:", line, "| col:", col, "| err:", err);
-    document.body.insertAdjacentHTML("afterbegin",
-      '<div style="background:red;color:white;padding:8px;font-size:11px;word-break:break-all;">'
-      + 'ERROR: ' + msg + ' (line ' + line + ')</div>');
   };
 
   // ── State ──
@@ -260,111 +685,90 @@
   let pendingImportJson = null;
   let lastExportJson = null;
   let lastExportFilename = null;
-  let currentMode = null; // "import" or "export"
+  let allExportComments = []; // full parsed comments array
+  let currentFilter = "all";
+
+  // ── Avatar colors ──
+  const avatarColors = [
+    "#7b61ff", "#14ae5c", "#f24822", "#0d99ff", "#ff8c00",
+    "#e04dab", "#00b2a9", "#6236ff", "#ff6250", "#009379"
+  ];
+  function getAvatarColor(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return avatarColors[Math.abs(hash) % avatarColors.length];
+  }
+
+  // ── Time formatting ──
+  function timeAgo(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "now";
+    if (mins < 60) return mins + "m ago";
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + "h ago";
+    const days = Math.floor(hours / 24);
+    if (days < 30) return days + "d ago";
+    const months = Math.floor(days / 30);
+    return months + "mo ago";
+  }
 
   // ── DOM refs ──
-  // Import
-  const importSection = document.getElementById("importSection");
-  const importReady = document.getElementById("importReady");
-  const importPreview = document.getElementById("importPreview");
-  const importBtn = document.getElementById("importBtn");
-  const importStatus = document.getElementById("importStatus");
-  const sectionDivider = document.getElementById("sectionDivider");
-
-  // Export (open mode)
-  const exportSectionOpen = document.getElementById("exportSectionOpen");
-  const includeResolvedCb = document.getElementById("includeResolved");
-  const exportBtn = document.getElementById("exportBtn");
+  const fetchBtn = document.getElementById("fetchBtn");
   const exportStatus = document.getElementById("exportStatus");
-  const exportList = document.getElementById("exportList");
-  const downloadBtn = document.getElementById("downloadBtn");
+  const exportCommentCards = document.getElementById("exportCommentCards");
+  const exportEmpty = document.getElementById("exportEmpty");
+  const commentCountEl = document.getElementById("commentCount");
 
-  // Export (collapsed mode)
-  const exportSectionCollapsed = document.getElementById("exportSectionCollapsed");
-  const includeResolvedCollapsedCb = document.getElementById("includeResolvedCollapsed");
-  const exportBtnCollapsed = document.getElementById("exportBtnCollapsed");
-  const exportStatusCollapsed = document.getElementById("exportStatusCollapsed");
-  const exportListCollapsed = document.getElementById("exportListCollapsed");
-  const downloadBtnCollapsed = document.getElementById("downloadBtnCollapsed");
+  const importEmpty = document.getElementById("importEmpty");
+  const importCommentCards = document.getElementById("importCommentCards");
+  const importStatusLabel = document.getElementById("importStatusLabel");
+  const importBtn = document.getElementById("importBtn");
+  const importActionBar = document.getElementById("importActionBar");
+  const importStatus = document.getElementById("importStatus");
+  const importFetchBtn = document.getElementById("importFetchBtn");
 
-  // Settings
   const fileKeyInput = document.getElementById("fileKeyInput");
   const fileKeyStatus = document.getElementById("fileKeyStatus");
   const tokenInput = document.getElementById("tokenInput");
   const tokenToggle = document.getElementById("tokenToggle");
   const saveTokenCb = document.getElementById("saveToken");
 
-  // Refresh
-  const refreshSavedBtn = document.getElementById("refreshSavedBtn");
-
-  // ── Active export refs (point to whichever mode is active) ──
-  function getActiveExportRefs() {
-    if (currentMode === "import") {
-      return {
-        includeResolvedCb: includeResolvedCollapsedCb,
-        exportBtn: exportBtnCollapsed,
-        exportStatus: exportStatusCollapsed,
-        exportList: exportListCollapsed,
-        downloadBtn: downloadBtnCollapsed,
-      };
-    }
-    return {
-      includeResolvedCb,
-      exportBtn,
-      exportStatus,
-      exportList,
-      downloadBtn,
-    };
-  }
-
-  // ── Mode switching ──
-  function switchToMode(mode, savedExportJson) {
-    currentMode = mode;
-
-    if (mode === "import") {
-      // Import 강조 모드
-      importSection.style.display = "block";
-      sectionDivider.style.display = "block";
-      exportSectionOpen.style.display = "none";
-      exportSectionCollapsed.style.display = "block";
-
-      if (savedExportJson) {
-        loadImportJson(savedExportJson);
-      }
-    } else {
-      // Export 강조 모드
-      importSection.style.display = "none";
-      sectionDivider.style.display = "none";
-      exportSectionOpen.style.display = "block";
-      exportSectionCollapsed.style.display = "none";
-    }
-  }
-
-  // ── Page navigation ──
-  function showPage(pageId) {
-    document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
-    document.getElementById("page-" + pageId).classList.add("active");
-  }
-
-  document.getElementById("openSettingsBtn").addEventListener("click", () => {
-    showPage("settings");
+  // ── Tab switching ──
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    });
   });
 
-  document.getElementById("backBtn").addEventListener("click", () => {
-    const raw = fileKeyInput.value.trim();
-    if (raw) {
-      const key = parseFigmaFileKey(raw) ?? raw;
-      applyFileKey(key);
-    }
-    if (saveTokenCb.checked && tokenInput.value.trim()) {
-      parent.postMessage({ pluginMessage: { type: "save-token", token: tokenInput.value.trim() } }, "*");
-    }
-    showPage("main");
+  // ── Filter switching ──
+  document.querySelectorAll(".filter-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      currentFilter = chip.dataset.filter;
+      renderExportComments();
+    });
+  });
+
+  const includeResolvedCb = document.getElementById("includeResolved");
+
+  // 체크박스 토글 시 즉시 리스트 반영
+  includeResolvedCb.addEventListener("change", () => {
+    renderExportComments();
   });
 
   // ══════════════════════════════════════════════════════════════════
   //  EXPORT
   // ══════════════════════════════════════════════════════════════════
+
+  fetchBtn.addEventListener("click", handleExportClick);
 
   function handleExportClick() {
     const token = tokenInput.value.trim();
@@ -372,33 +776,23 @@
       const missing = [];
       if (!fileKey) missing.push("File Key");
       if (!token) missing.push("Access Token");
-      const refs = getActiveExportRefs();
-      showStatus(refs.exportStatus, "warning", missing.join("과 ") + "이 설정되지 않았습니다.\n설정(⚙)에서 입력해주세요.");
-      showPage("settings");
+      showStatus(exportStatus, "warning", missing.join(" and ") + " not configured.\nGo to Settings tab.");
+      // Switch to settings tab
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      document.querySelector('[data-tab="settings"]').classList.add("active");
+      document.getElementById("tab-settings").classList.add("active");
       return;
     }
 
-    const refs = getActiveExportRefs();
-    refs.exportBtn.disabled = true;
-    refs.exportBtn.textContent = "Fetching comments…";
-    showStatus(refs.exportStatus, "", "");
+    fetchBtn.disabled = true;
+    fetchBtn.innerHTML = svgRefreshIcon + ' Fetching...';
+    showStatus(exportStatus, "", "");
     startExportFetch();
   }
 
-  exportBtn.addEventListener("click", handleExportClick);
-  exportBtnCollapsed.addEventListener("click", handleExportClick);
-
-  downloadBtn.addEventListener("click", () => {
-    if (lastExportJson) downloadJson(lastExportJson, lastExportFilename);
-  });
-  downloadBtnCollapsed.addEventListener("click", () => {
-    if (lastExportJson) downloadJson(lastExportJson, lastExportFilename);
-  });
-
   async function startExportFetch() {
     const token = tokenInput.value.trim();
-    const refs = getActiveExportRefs();
-
     if (saveTokenCb.checked) {
       parent.postMessage({ pluginMessage: { type: "save-token", token } }, "*");
     }
@@ -411,76 +805,247 @@
       if (!res.ok) {
         const body = await res.text();
         if (res.status === 403 || res.status === 401) {
-          throw new Error("인증 실패: 토큰이 유효한지 확인해주세요.");
+          throw new Error("Authentication failed. Check your token.");
         }
         throw new Error("Figma API error " + res.status + ": " + body);
       }
 
       const data = await res.json();
-      console.log("[Comment Bridge] API response keys:", Object.keys(data));
       const rawComments = data.meta?.comments ?? data.comments ?? [];
-      console.log("[Comment Bridge] rawComments count:", rawComments.length);
 
       if (rawComments.length === 0) {
-        showStatus(refs.exportStatus, "warning", "이 파일에 코멘트가 없습니다.\n(file key: " + fileKey + ")");
-        refs.exportBtn.disabled = false;
-        refs.exportBtn.textContent = "Export";
+        showStatus(exportStatus, "warning", "No comments in this file.\n(file key: " + fileKey + ")");
+        resetFetchBtn();
         return;
       }
 
-      refs.exportBtn.textContent = "Resolving positions…";
+      fetchBtn.innerHTML = svgRefreshIcon + ' Resolving...';
 
-      // Fetch node positions from REST API for accurate coordinates
       const nodePositions = await fetchNodePositions(fileKey, token, rawComments);
 
-      refs.exportBtn.textContent = "Processing…";
+      fetchBtn.innerHTML = svgRefreshIcon + ' Processing...';
 
       parent.postMessage({
         pluginMessage: {
           type: "process-export",
           rawComments: rawComments,
-          includeResolved: refs.includeResolvedCb.checked,
+          includeResolved: includeResolvedCb.checked,
           nodePositions: nodePositions
         }
       }, "*");
 
     } catch (e) {
-      showStatus(refs.exportStatus, "error", e.message);
-      refs.exportBtn.disabled = false;
-      refs.exportBtn.textContent = "Export";
+      showStatus(exportStatus, "error", e.message);
+      resetFetchBtn();
     }
+  }
+
+  function resetFetchBtn() {
+    fetchBtn.disabled = false;
+    fetchBtn.innerHTML = svgRefreshIcon + ' Fetch';
+  }
+
+
+  // ── Render export comments ──
+  function renderExportComments() {
+    let filtered = allExportComments;
+
+    // "Include resolved" 체크 해제 시 resolved 제거
+    if (!includeResolvedCb.checked) {
+      filtered = filtered.filter(c => !c.isResolved);
+    }
+
+    if (currentFilter === "unresolved") {
+      filtered = filtered.filter(c => !c.isResolved);
+    } else if (currentFilter === "resolved") {
+      filtered = filtered.filter(c => c.isResolved);
+    }
+
+    commentCountEl.textContent = filtered.length + " comments";
+
+    if (filtered.length === 0 && allExportComments.length === 0) {
+      exportEmpty.style.display = "";
+      return;
+    }
+
+    exportEmpty.style.display = "none";
+
+    let html = "";
+    if (filtered.length === 0) {
+      html = '<div style="text-align:center;padding:24px;color:#b3b3b3;font-size:12px;">No ' + currentFilter + ' comments</div>';
+    } else {
+      filtered.forEach(c => {
+        html += renderCommentCard(c);
+      });
+    }
+    exportCommentCards.innerHTML = html;
+    attachCardClickHandlers(exportCommentCards);
+  }
+
+  function renderCommentCard(c) {
+    const color = getAvatarColor(c.author || "?");
+    const initial = (c.author || "?").charAt(0).toUpperCase();
+    const statusIcon = c.isResolved ? svgResolved : svgUnresolved;
+    const threads = c.thread || [];
+    const threadCount = threads.length;
+
+    let html = '<div class="comment-card" data-comment-id="' + escapeHtml(c.originalCommentId || '') + '">';
+    html += '<div class="comment-card-inner">';
+    html += '<div class="avatar" style="background:' + color + '">' + initial + '</div>';
+    html += '<div class="card-content">';
+    html += '<div class="card-header"><span class="card-author">' + escapeHtml(c.author) + '</span><span class="card-status-icon">' + statusIcon + '</span></div>';
+    html += '<div class="card-message">' + escapeHtml(c.message) + '</div>';
+
+    // Thread replies preview
+    if (threadCount > 0) {
+      html += '<div class="card-thread">';
+      var showCount = Math.min(threadCount, 2);
+      for (var ti = 0; ti < showCount; ti++) {
+        var reply = threads[ti];
+        html += '<div class="card-thread-item">';
+        html += '<span class="card-thread-author">' + escapeHtml(reply.author) + ':</span>';
+        var replyMsg = reply.message.length > 50 ? reply.message.substring(0, 50) + '...' : reply.message;
+        html += escapeHtml(replyMsg);
+        html += '</div>';
+      }
+      if (threadCount > 2) {
+        html += '<div class="card-thread-more">+ ' + (threadCount - 2) + ' more replies</div>';
+      }
+      html += '</div>';
+    }
+
+    html += '<div class="card-footer">';
+    if (c.pageName) {
+      html += '<span class="card-tag card-tag-page">' + escapeHtml(c.pageName) + '</span>';
+    }
+    if (c.frameName) {
+      html += '<span class="card-tag">' + escapeHtml(c.frameName) + '</span>';
+    }
+    if (threadCount > 0) {
+      html += '<span class="card-replies">' + svgReply + ' ' + threadCount + '</span>';
+    }
+    html += '</div></div></div></div>';
+    return html;
+  }
+
+  // SVG icons
+  const svgUnresolved = '<svg viewBox="0 0 13 13" fill="none" width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" stroke="#f24822" stroke-width="1.2"/><path d="M6.5 3.5v3.5" stroke="#f24822" stroke-width="1.2" stroke-linecap="round"/><circle cx="6.5" cy="9.5" r="0.75" fill="#f24822"/></svg>';
+  const svgResolved = '<svg viewBox="0 0 13 13" fill="none" width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" fill="#14ae5c"/><path d="M4 6.5l2 2 3-3.5" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgReply = '<svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M1.5 2.5h9a0 0 0 010 0v5a1 1 0 01-1 1h-2.5l-2 2v-2H2.5a1 1 0 01-1-1v-5a0 0 0 010 0z" stroke="#999" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgRefreshIcon = '<svg viewBox="0 0 12 12" fill="none" width="12" height="12"><path d="M10 6 A 4 4 0 1 1 6 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/><path d="M10 2v2.5H7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function attachCardClickHandlers(container) {
+    container.addEventListener("click", function(e) {
+      var card = e.target.closest(".comment-card[data-comment-id]");
+      if (card && card.dataset.commentId) {
+        parent.postMessage({
+          pluginMessage: { type: "navigate-to-comment", commentId: card.dataset.commentId }
+        }, "*");
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════
   //  IMPORT
   // ══════════════════════════════════════════════════════════════════
 
+  // Import tab Fetch buttons (empty state + ready state)
+  function handleImportFetch() {
+    const token = tokenInput.value.trim();
+    if (!token || !fileKey) {
+      const missing = [];
+      if (!fileKey) missing.push("File Key");
+      if (!token) missing.push("Access Token");
+      showStatus(importStatus, "warning", missing.join(" and ") + " not configured.\nGo to Settings tab.");
+      return;
+    }
+    setImportFetchState(true, "Fetching...");
+    showStatus(importStatus, "", "");
+    startImportFetch();
+  }
+
+  importFetchBtn.addEventListener("click", handleImportFetch);
+
+  async function startImportFetch() {
+    const token = tokenInput.value.trim();
+    if (saveTokenCb.checked) {
+      parent.postMessage({ pluginMessage: { type: "save-token", token } }, "*");
+    }
+    try {
+      const res = await fetch("https://api.figma.com/v1/files/" + fileKey + "/comments", {
+        headers: { "X-Figma-Token": token }
+      });
+      if (!res.ok) {
+        if (res.status === 403 || res.status === 401) throw new Error("Authentication failed. Check your token.");
+        throw new Error("Figma API error " + res.status);
+      }
+      const data = await res.json();
+      const rawComments = data.meta?.comments ?? data.comments ?? [];
+      if (rawComments.length === 0) {
+        showStatus(importStatus, "warning", "No comments in this file.");
+        resetImportFetchBtn();
+        return;
+      }
+      setImportFetchState(true, "Resolving...");
+      const nodePositions = await fetchNodePositions(fileKey, token, rawComments);
+      setImportFetchState(true, "Processing...");
+      parent.postMessage({
+        pluginMessage: {
+          type: "process-export",
+          rawComments: rawComments,
+          includeResolved: includeResolvedCb.checked,
+          nodePositions: nodePositions
+        }
+      }, "*");
+    } catch (e) {
+      showStatus(importStatus, "error", e.message);
+      resetImportFetchBtn();
+    }
+  }
+
+  function setImportFetchState(disabled, label) {
+    importFetchBtn.disabled = disabled;
+    importFetchBtn.innerHTML = svgRefreshIcon + ' ' + label;
+  }
+
+  function resetImportFetchBtn() {
+    setImportFetchState(false, "Fetch");
+  }
+
   function loadImportJson(raw) {
-    console.log("[Comment Bridge] loadImportJson typeof:", typeof raw, "| isString:", typeof raw === "string");
     let payload;
     try {
       payload = typeof raw === "string" ? JSON.parse(raw) : raw;
     } catch (e) {
-      showStatus(importStatus, "error", "유효한 JSON이 아닙니다: " + e.message);
+      showStatus(importStatus, "error", "Invalid JSON: " + e.message);
       return;
     }
 
     if (Array.isArray(payload)) payload = { comments: payload };
     if (!payload.comments || !Array.isArray(payload.comments) || payload.comments.length === 0) {
-      showStatus(importStatus, "error", "코멘트가 없습니다");
+      pendingImportJson = null;
+      importEmpty.style.display = "";
+      importActionBar.style.display = "none";
+      importStatusLabel.textContent = "No comment data";
+      importCommentCards.innerHTML = '<div class="empty-state" id="importEmpty"><p style="color:#b3b3b3;font-size:12px;">Press Fetch to load comments</p></div>';
       return;
     }
 
     pendingImportJson = payload;
-    importReady.innerHTML = '<div class="comment-count">' + payload.comments.length + '개 코멘트 준비됨</div>';
-    renderCommentList(importPreview, payload.comments);
-    importBtn.style.display = "block";
-    importBtn.disabled = false;
-    importBtn.textContent = "Import Now";
+    importEmpty.style.display = "none";
+    importActionBar.style.display = "";
+    importStatusLabel.innerHTML = '<span style="color:#0d99ff;">' + payload.comments.length + '</span> comments ready to import';
+
+    let html = "";
+    payload.comments.forEach(c => {
+      html += renderCommentCard(c);
+    });
+    importCommentCards.innerHTML = html;
+    attachCardClickHandlers(importCommentCards);
   }
 
   importBtn.addEventListener("click", () => {
-    if (!pendingImportJson) { showStatus(importStatus, "error", "불러온 export가 없습니다."); return; }
+    if (!pendingImportJson) { showStatus(importStatus, "error", "No export loaded."); return; }
 
     const payload = pendingImportJson;
     const errors = [];
@@ -500,16 +1065,15 @@
     }
 
     importBtn.disabled = true;
-    importBtn.textContent = "Importing…";
+    importBtn.innerHTML = '<svg viewBox="0 0 14 14" fill="none"><path d="M7 11.375v-7m0 0l2.625 2.625M7 4.375L4.375 7M2.625 1.75h8.75" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Importing...';
     showStatus(importStatus, "", "");
     parent.postMessage({ pluginMessage: { type: "import-comments", payload } }, "*");
   });
 
-  // Refresh saved export
-  refreshSavedBtn.addEventListener("click", () => {
-    parent.postMessage({ pluginMessage: { type: "load-export", manual: true } }, "*");
-    refreshSavedBtn.textContent = "불러오는 중…";
-  });
+  function resetImportBtn() {
+    importBtn.disabled = false;
+    importBtn.innerHTML = '<svg viewBox="0 0 14 14" fill="none"><path d="M7 11.375v-7m0 0l2.625 2.625M7 4.375L4.375 7M2.625 1.75h8.75" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Import Now';
+  }
 
   // ══════════════════════════════════════════════════════════════════
   //  SETTINGS
@@ -519,6 +1083,24 @@
     const isPassword = tokenInput.type === "password";
     tokenInput.type = isPassword ? "text" : "password";
     tokenToggle.textContent = isPassword ? "Hide" : "Show";
+  });
+
+  const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+  const settingsStatus = document.getElementById("settingsStatus");
+
+  saveSettingsBtn.addEventListener("click", () => {
+    // Save file key
+    const raw = fileKeyInput.value.trim();
+    if (raw) {
+      const key = parseFigmaFileKey(raw) ?? raw;
+      applyFileKey(key);
+    }
+    // Save token
+    if (saveTokenCb.checked && tokenInput.value.trim()) {
+      parent.postMessage({ pluginMessage: { type: "save-token", token: tokenInput.value.trim() } }, "*");
+    }
+    showStatus(settingsStatus, "success", "Settings saved!");
+    setTimeout(() => { showStatus(settingsStatus, "", ""); }, 2000);
   });
 
   function parseFigmaFileKey(text) {
@@ -538,7 +1120,7 @@
   function applyFileKey(key) {
     fileKey = key;
     fileKeyInput.value = key;
-    fileKeyStatus.innerHTML = "Current: <code>" + escapeHtml(key) + "</code>";
+    updateFileKeyDisplay();
     parent.postMessage({ pluginMessage: { type: "save-filekey", fileKey: key } }, "*");
   }
 
@@ -546,7 +1128,7 @@
     if (fileKey) {
       fileKeyStatus.innerHTML = '<span class="set">Current: <code>' + escapeHtml(fileKey) + '</code></span>';
     } else {
-      fileKeyStatus.innerHTML = '<span class="unset">설정되지 않음</span>';
+      fileKeyStatus.innerHTML = '<span class="unset">Not configured</span>';
     }
   }
 
@@ -557,6 +1139,22 @@
       e.preventDefault();
       applyFileKey(key);
     }
+  });
+
+  // Auto-save settings when switching away from settings tab
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      // Save file key if set
+      const raw = fileKeyInput.value.trim();
+      if (raw) {
+        const key = parseFigmaFileKey(raw) ?? raw;
+        if (key !== fileKey) applyFileKey(key);
+      }
+      // Save token
+      if (saveTokenCb.checked && tokenInput.value.trim()) {
+        parent.postMessage({ pluginMessage: { type: "save-token", token: tokenInput.value.trim() } }, "*");
+      }
+    });
   });
 
   // ══════════════════════════════════════════════════════════════════
@@ -577,9 +1175,14 @@
           tokenInput.value = msg.savedToken;
         }
         if (msg.savedExport) {
-          switchToMode("import", msg.savedExport);
-        } else {
-          switchToMode("export");
+          loadImportJson(msg.savedExport);
+          // Also parse for export tab display
+          try {
+            const parsed = typeof msg.savedExport === "string" ? JSON.parse(msg.savedExport) : msg.savedExport;
+            allExportComments = parsed.comments || [];
+            lastExportJson = typeof msg.savedExport === "string" ? msg.savedExport : JSON.stringify(msg.savedExport);
+            renderExportComments();
+          } catch(e) {}
         }
         break;
 
@@ -591,16 +1194,15 @@
 
       case "import-progress": {
         var pct = Math.round((msg.current / msg.total) * 100);
-        importBtn.textContent = "Importing… " + pct + "%";
-        importStatus.className = "status success";
+        importBtn.innerHTML = '<svg viewBox="0 0 14 14" fill="none"><path d="M7 11.375v-7m0 0l2.625 2.625M7 4.375L4.375 7M2.625 1.75h8.75" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> ' + pct + '%';
+        importStatus.className = "status-msg success";
         importStatus.innerHTML = msg.pageName + " (" + msg.current + "/" + msg.total + ")"
           + '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + pct + '%"></div></div>';
         break;
       }
 
       case "import-complete":
-        importBtn.disabled = false;
-        importBtn.textContent = "Import Now";
+        resetImportBtn();
         if (msg.failed > 0 || msg.unplaced > 0) {
           const parts = [];
           if (msg.placed > 0) parts.push(msg.placed + " placed");
@@ -617,64 +1219,65 @@
           }
           showStatus(importStatus, "warning", "Import completed: " + detail);
         } else {
-          showStatus(importStatus, "success", msg.placed + "개 코멘트를 성공적으로 import했습니다!");
+          showStatus(importStatus, "success", msg.placed + " comments imported successfully!");
         }
         break;
 
       case "import-error":
-        importBtn.disabled = false;
-        importBtn.textContent = "Import Now";
+        resetImportBtn();
         showStatus(importStatus, "error", "Error: " + msg.error);
         break;
 
       case "export-ready": {
-        const refs = getActiveExportRefs();
-        refs.exportBtn.disabled = false;
-        refs.exportBtn.textContent = "Export";
+        resetFetchBtn();
+        resetImportFetchBtn();
         lastExportJson = msg.json;
         lastExportFilename = msg.filename;
-        refs.downloadBtn.style.display = "none";
-        showStatus(refs.exportStatus, "", "파일에 저장 중…");
         try {
           const parsed = JSON.parse(msg.json);
-          renderCommentList(refs.exportList, parsed.comments || []);
+          allExportComments = parsed.comments || [];
+          renderExportComments();
+          // Also load into import tab
+          loadImportJson(msg.json);
         } catch(e) {}
+        // Auto-save
         parent.postMessage({ pluginMessage: { type: "save-export", json: msg.json } }, "*");
+        showStatus(exportStatus, "", "Saving...");
         break;
       }
 
       case "export-saved": {
-        const refs = getActiveExportRefs();
-        showStatus(refs.exportStatus, "success", "Export 완료!");
-        refs.downloadBtn.style.display = "block";
-        // Export 후 Import 모드로 전환
+        showStatus(exportStatus, "success", "Saved! Import tab is ready.");
+        // Update import tab
         if (lastExportJson) {
-          switchToMode("import", lastExportJson);
-          showStatus(importStatus, "success", "Export 완료! Import 버튼을 눌러 포스트잇으로 재현하세요.");
+          loadImportJson(lastExportJson);
         }
         break;
       }
 
       case "export-load-result":
-        refreshSavedBtn.textContent = "저장된 export 새로고침 ↻";
         if (msg.json) {
-          switchToMode("import", msg.json);
+          loadImportJson(msg.json);
+          // Also update export tab
+          try {
+            const parsed = typeof msg.json === "string" ? JSON.parse(msg.json) : msg.json;
+            allExportComments = parsed.comments || [];
+            lastExportJson = typeof msg.json === "string" ? msg.json : JSON.stringify(msg.json);
+            renderExportComments();
+          } catch(e) {}
           if (msg.manual) {
-            showStatus(importStatus, "success", "저장된 export를 불러왔습니다. Import 버튼을 눌러 적용하세요.");
+            showStatus(importStatus, "success", "Saved export loaded. Press Import Now to apply.");
           }
         } else {
           if (msg.manual) {
-            switchToMode("export");
-            showStatus(importStatus, "warning", "저장된 export가 없습니다.\n먼저 Export를 실행해주세요.");
+            showStatus(importStatus, "warning", "No saved export found.\nFetch comments in the Export tab first.");
           }
         }
         break;
 
       case "export-error": {
-        const refs = getActiveExportRefs();
-        refs.exportBtn.disabled = false;
-        refs.exportBtn.textContent = "Export";
-        showStatus(refs.exportStatus, "error", msg.error);
+        resetFetchBtn();
+        showStatus(exportStatus, "error", msg.error);
         break;
       }
     }
@@ -688,11 +1291,12 @@
   // ══════════════════════════════════════════════════════════════════
 
   function showStatus(el, type, text) {
-    if (text && text.toString().includes("not a function")) {
-      console.error("[Comment Bridge] FOUND IT! caller:", new Error().stack);
+    el.className = "status-msg" + (type ? " " + type : "");
+    if (type) {
+      el.textContent = text;
+    } else {
+      el.style.display = "none";
     }
-    el.className = "status" + (type ? " " + type : "");
-    el.textContent = text;
   }
 
   function escapeHtml(str) {
@@ -712,9 +1316,7 @@
 
     try {
       var encodedIds = nodeIds.map(function(id) { return encodeURIComponent(id); }).join(",");
-      console.log("[Comment Bridge] fetching node positions for", nodeIds.length, "nodes:", nodeIds);
 
-      // 1. /nodes endpoint: reliable absoluteBoundingBox for each node
       var nodesUrl = "https://api.figma.com/v1/files/" + fKey + "/nodes?ids=" + encodedIds;
       var fileUrl = "https://api.figma.com/v1/files/" + fKey + "?ids=" + encodedIds + "&depth=0";
       var headers = { "X-Figma-Token": token };
@@ -726,10 +1328,8 @@
 
       var positions = {};
 
-      // Parse /nodes response for absoluteBoundingBox
       if (nodesRes.ok) {
         var nodesData = await nodesRes.json();
-        console.log("[Comment Bridge] /nodes response keys:", Object.keys(nodesData));
         for (var nid of nodeIds) {
           var entry = nodesData.nodes && nodesData.nodes[nid];
           if (entry && entry.document) {
@@ -744,7 +1344,6 @@
                 frameName: ""
               };
             } else if (doc.type === "CANVAS") {
-              // Page node: no bounding box, use 0,0 and page name
               positions[nid] = {
                 absX: 0, absY: 0, width: 0, height: 0,
                 pageName: doc.name || "",
@@ -753,18 +1352,13 @@
             }
           }
         }
-        console.log("[Comment Bridge] /nodes resolved positions:", Object.keys(positions).length);
-      } else {
-        console.log("[Comment Bridge] /nodes fetch failed:", nodesRes.status);
       }
 
-      // Parse /files?ids= response for page/frame names via tree traversal
       if (fileRes.ok) {
         var fileData = await fileRes.json();
         if (fileData.document) {
           var pageFrameInfo = {};
           traverseFileTree(fileData.document, null, null, pageFrameInfo, nodeIds);
-          // Merge page/frame info into positions
           for (var pid in pageFrameInfo) {
             if (positions[pid]) {
               positions[pid].pageName = pageFrameInfo[pid].pageName;
@@ -773,20 +1367,9 @@
               positions[pid] = pageFrameInfo[pid];
             }
           }
-          console.log("[Comment Bridge] /files tree resolved:", Object.keys(pageFrameInfo).length);
-        } else {
-          console.log("[Comment Bridge] /files response has no document key:", Object.keys(fileData));
         }
-      } else {
-        console.log("[Comment Bridge] /files fetch failed:", fileRes.status);
       }
 
-      var resolvedCount = Object.keys(positions).length;
-      console.log("[Comment Bridge] total resolved:", resolvedCount, "/", nodeIds.length);
-      if (resolvedCount < nodeIds.length) {
-        var missed = nodeIds.filter(function(id) { return !positions[id]; });
-        console.log("[Comment Bridge] unresolved nodes:", missed);
-      }
       return positions;
     } catch (e) {
       console.error("[Comment Bridge] fetchNodePositions error:", e);
@@ -802,7 +1385,6 @@
       topFrame = null;
     }
 
-    // Direct child of a page = top-level frame
     if (currentPage && !topFrame && node.type !== "CANVAS" && node.type !== "DOCUMENT") {
       topFrame = node.name;
     }
@@ -823,49 +1405,6 @@
         traverseFileTree(node.children[i], currentPage, topFrame, positions, targetIds);
       }
     }
-  }
-
-  function renderCommentList(container, comments) {
-    let html = '<div class="comment-list">';
-    comments.forEach((c) => {
-      html += '<div class="comment-item" data-comment-id="' + escapeHtml(c.originalCommentId || '') + '">'
-        + '<span class="comment-author">' + escapeHtml(c.author) + '</span>'
-        + (c.pageName ? '<span class="comment-page">' + escapeHtml(c.pageName) + '</span>' : '')
-        + '<div class="comment-message">' + escapeHtml(c.message) + '</div>'
-        + '</div>';
-    });
-    html += '</div>';
-    container.innerHTML = html;
-
-    // Click-to-navigate: delegate clicks on comment items
-    // Use a named handler ref to avoid duplicate listeners
-    if (container._commentClickHandler) {
-      container.removeEventListener("click", container._commentClickHandler);
-    }
-    container._commentClickHandler = function(e) {
-      var item = e.target.closest(".comment-item[data-comment-id]");
-      console.log("[Comment Bridge] click:", e.target.tagName, "| item:", !!item, "| id:", item && item.dataset.commentId);
-      if (item && item.dataset.commentId) {
-        console.log("[Comment Bridge] sending navigate-to-comment:", item.dataset.commentId);
-        parent.postMessage({
-          pluginMessage: { type: "navigate-to-comment", commentId: item.dataset.commentId }
-        }, "*");
-        console.log("[Comment Bridge] postMessage sent");
-      }
-    };
-    container.addEventListener("click", container._commentClickHandler);
-  }
-
-  function downloadJson(json, filename) {
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 </script>
 

@@ -2,6 +2,7 @@
 export interface ThreadReply {
   author: string;
   message: string;
+  createdAt?: string;
 }
 
 // ── Import types ─────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ export interface ExportComment {
   originalCommentId: string;
   author: string;
   message: string;
+  createdAt: string;
   thread: ThreadReply[];
   isResolved: boolean;
   pageName: string;
