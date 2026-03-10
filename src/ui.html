@@ -26,30 +26,35 @@
     line-height: 1.5;
   }
 
-  /* ── Tabs ── */
-  .tab-bar {
+  /* ── Page switching ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Header ── */
+  .header {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
-  .tab-btn {
-    flex: 1;
-    padding: 10px 0;
-    border: none;
+  .header h1 { font-size: 14px; font-weight: 700; }
+  .header-btn {
     background: none;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px 8px;
     cursor: pointer;
-    transition: color 0.15s, box-shadow 0.15s;
+    font-size: 14px;
+    color: var(--text-secondary);
+    transition: border-color 0.2s, color 0.2s;
+    line-height: 1;
   }
-  .tab-btn:hover { color: var(--text); }
-  .tab-btn.active {
-    color: var(--primary);
-    box-shadow: inset 0 -2px 0 var(--primary);
-  }
-  .tab-content { display: none; padding: 20px; }
-  .tab-content.active { display: block; }
+  .header-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ── Content ── */
+  .content { padding: 20px; }
 
   /* ── Shared ── */
   h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
@@ -64,256 +69,416 @@
   .status.success { display: block; background: rgba(46,158,90,.1); color: var(--success); border: 1px solid rgba(46,158,90,.2); }
   .status.warning { display: block; background: rgba(200,138,26,.08); color: var(--warning); border: 1px solid rgba(200,138,26,.15); }
   .status.error { display: block; background: rgba(217,68,68,.08); color: var(--error); border: 1px solid rgba(217,68,68,.15); }
-  .info { margin-top: 16px; padding: 10px 12px; background: var(--surface); border-radius: var(--radius); font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
-  .info summary { cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
-  .info pre { margin-top: 8px; background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 10px; overflow-x: auto; white-space: pre; }
 
-  /* ── Import ── */
-  .file-drop { border: 2px dashed var(--border); border-radius: var(--radius); padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; color: var(--text-secondary); font-size: 13px; position: relative; }
-  .file-drop:hover, .file-drop.dragover { border-color: var(--primary); background: rgba(91,91,247,.04); }
-  .file-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .file-drop .file-name { color: var(--primary); font-weight: 600; margin-top: 4px; }
-  .divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--text-secondary); font-size: 12px; }
-  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-  textarea { width: 100%; height: 130px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: "SF Mono","Fira Code",monospace; font-size: 12px; resize: vertical; outline: none; transition: border-color 0.2s; color: var(--text); background: var(--surface); }
-  textarea:focus { border-color: var(--primary); }
-  textarea::placeholder { color: #aaa; }
+  /* ── Section divider ── */
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
 
-  /* ── Export ── */
-  .token-row { display: flex; gap: 8px; }
-  .token-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; outline: none; background: var(--surface); color: var(--text); font-family: "SF Mono","Fira Code",monospace; }
-  .token-row input:focus { border-color: var(--primary); }
+  /* ── Comment list ── */
+  .comment-list { margin-top: 8px; max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  .comment-item { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; line-height: 1.4; cursor: pointer; transition: background 0.15s; }
+  .comment-item:hover { background: var(--surface); }
+  .comment-item:last-child { border-bottom: none; }
+  .comment-item .comment-author { font-weight: 600; color: var(--text); }
+  .comment-item .comment-page { font-size: 11px; color: var(--text-secondary); margin-left: 4px; }
+  .comment-item .comment-message { color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .comment-count { font-size: 13px; font-weight: 600; color: var(--success); margin-bottom: 4px; }
+
+  /* ── Export details ── */
+  .export-details { margin-top: 0; }
+  .export-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+    list-style: none;
+  }
+  .export-details summary::before { content: "▸ "; }
+  .export-details[open] summary::before { content: "▾ "; }
+  .export-details summary:hover { color: var(--text); }
+  .export-details .export-inner { padding-top: 12px; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  /* ── Text link ── */
+  .text-link {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+  .text-link:hover { color: var(--primary); }
+
+  /* ── Settings ── */
+  .settings-row { display: flex; gap: 8px; }
+  .settings-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; outline: none; background: var(--surface); color: var(--text); font-family: "SF Mono","Fira Code",monospace; }
+  .settings-row input:focus { border-color: var(--primary); }
   .btn-sm { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text-secondary); }
   .btn-sm:hover { border-color: var(--primary); color: var(--primary); }
   .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer; margin-top: 8px; }
   .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
-  .file-key-display { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; word-break: break-all; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .file-key-display code { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
-  .file-key-display .change-btn { flex-shrink: 0; font-size: 10px; padding: 2px 7px; }
+  .info { margin-top: 16px; padding: 10px 12px; background: var(--surface); border-radius: var(--radius); font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
+  .info summary { cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+  .setting-value { font-size: 11px; color: var(--text-secondary); word-break: break-all; margin-top: 4px; }
+  .setting-value code { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+  .setting-value .set { color: var(--success); }
+  .setting-value .unset { color: var(--error); }
 </style>
 </head>
 <body>
 
-<!-- Tab bar -->
-<div class="tab-bar">
-  <button class="tab-btn active" data-tab="import">Import</button>
-  <button class="tab-btn" data-tab="export">Export</button>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MAIN PAGE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="page-main" class="page active">
+  <div class="header">
+    <h1>Comment Bridge</h1>
+    <button class="header-btn" id="openSettingsBtn" title="Settings">&#9881;</button>
+  </div>
+
+  <div class="content">
+    <!-- IMPORT SECTION (shown when savedExport exists) -->
+    <div id="importSection" style="display:none;">
+      <div id="importReady"></div>
+      <div id="importPreview"></div>
+      <button class="btn btn-primary" id="importBtn" style="margin-top:12px;">Import Now</button>
+      <div class="status" id="importStatus"></div>
+    </div>
+
+    <hr class="section-divider" id="sectionDivider" style="display:none;" />
+
+    <!-- EXPORT SECTION -->
+    <div id="exportSectionOpen">
+      <h2>Export Comments</h2>
+      <p class="subtitle">현재 파일의 코멘트를 JSON으로 내보냅니다</p>
+      <div class="section">
+        <label class="checkbox-label">
+          <input type="checkbox" id="includeResolved" /> Include resolved comments
+        </label>
+      </div>
+      <button class="btn btn-primary" id="exportBtn">Export</button>
+      <div class="status" id="exportStatus"></div>
+      <div id="exportList"></div>
+      <button class="btn-sm" id="downloadBtn" style="display:none; width:100%; margin-top:6px;">JSON으로 다운로드</button>
+    </div>
+
+    <details class="export-details" id="exportSectionCollapsed" style="display:none;">
+      <summary>Export Comments</summary>
+      <div class="export-inner">
+        <div class="section">
+          <label class="checkbox-label">
+            <input type="checkbox" id="includeResolvedCollapsed" /> Include resolved comments
+          </label>
+        </div>
+        <button class="btn btn-primary" id="exportBtnCollapsed">Export</button>
+        <div class="status" id="exportStatusCollapsed"></div>
+        <div id="exportListCollapsed"></div>
+        <button class="btn-sm" id="downloadBtnCollapsed" style="display:none; width:100%; margin-top:6px;">JSON으로 다운로드</button>
+      </div>
+    </details>
+
+    <!-- Footer: refresh link -->
+    <div style="text-align:center; margin-top:16px;">
+      <button class="text-link" id="refreshSavedBtn">저장된 export 새로고침 ↻</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- IMPORT TAB -->
+<!-- SETTINGS PAGE -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<div id="tab-import" class="tab-content active">
-  <h2>Import Comments</h2>
-  <p class="subtitle">Branch 코멘트 JSON을 포스트잇으로 재현합니다</p>
-
-  <div class="section">
-    <label>이 파일에 저장된 Export</label>
-    <button class="btn-sm" id="loadSavedBtn" style="width:100%; padding:9px 12px;">저장된 export 불러오기</button>
+<div id="page-settings" class="page">
+  <div class="header">
+    <button class="header-btn" id="backBtn" title="Back">&#8592; Back</button>
+    <h1>Settings</h1>
+    <span></span>
   </div>
 
-  <div class="divider">or</div>
-
-  <div class="section">
-    <label>Upload JSON file</label>
-    <div class="file-drop" id="fileDrop">
-      <span id="fileLabel">Click or drag &amp; drop a .json file</span>
-      <input type="file" accept=".json" id="fileInput" />
+  <div class="content">
+    <div class="section">
+      <label>File Key</label>
+      <input type="text" id="fileKeyInput"
+        placeholder="Figma URL을 붙여넣거나 file key 직접 입력"
+        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;outline:none;background:var(--surface);color:var(--text);font-family:'SF Mono','Fira Code',monospace;" />
+      <p style="font-size:11px;color:var(--text-secondary);margin-top:4px;">
+        브랜치: <code>figma.com/design/{key}/…?branch-file-key=<strong style="color:var(--primary)">branch-key</strong></code>
+      </p>
+      <div class="setting-value" id="fileKeyStatus"></div>
     </div>
-  </div>
 
-  <div class="divider">or</div>
-
-  <div class="section">
-    <label>Paste JSON</label>
-    <textarea id="jsonInput" placeholder='{ "comments": [{ "originalCommentId": "1", ... }] }'></textarea>
-  </div>
-
-  <button class="btn btn-primary" id="importBtn">Import Comments</button>
-  <div class="status" id="importStatus"></div>
-
-  <details class="info">
-    <summary>JSON format reference</summary>
-    <pre>{
-  "exportSessionId": "session-001",
-  "source": {
-    "fileKey": "abc123",
-    "branchName": "feature/redesign"
-  },
-  "comments": [
-    {
-      "originalCommentId": "c1",
-      "author": "Designer A",
-      "message": "Button color needs update",
-      "frameName": "Login Screen",
-      "relativeX": 0.35,
-      "relativeY": 0.6,
-      "absoluteX": 400,
-      "absoluteY": 300,
-      "thread": [
-        { "author": "Dev B", "message": "Fixed!" }
-      ]
-    }
-  ]
-}</pre>
-  </details>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- EXPORT TAB -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<div id="tab-export" class="tab-content">
-  <h2>Export Comments</h2>
-  <p class="subtitle">Branch 코멘트를 JSON 파일로 내보냅니다</p>
-
-  <div class="file-key-display" id="fileKeyDisplay">
-    <span>File key: <code>loading…</code></span>
-  </div>
-
-  <div id="fileKeyManualSection" style="display:none; margin-bottom:12px;">
-    <label>File Key <span style="color:var(--error); font-weight:normal; text-transform:none; letter-spacing:0;">(자동 감지 불가)</span></label>
-    <button class="btn-sm" id="pasteUrlBtn" style="width:100%; margin-bottom:8px; padding:9px 12px; border-color:var(--primary); color:var(--primary);">
-      클립보드에서 Figma URL 붙여넣기
-    </button>
-    <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:4px 0 6px;">또는 직접 입력</p>
-    <input type="text" id="fileKeyManualInput"
-      placeholder="URL 또는 file key 직접 입력"
-      style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;outline:none;background:var(--surface);color:var(--text);font-family:'SF Mono','Fira Code',monospace;" />
-    <p style="font-size:11px;color:var(--text-secondary);margin-top:4px;">
-      브랜치: <code>figma.com/design/{key}/…?branch-file-key=<strong style="color:var(--primary)">branch-key</strong></code>
-    </p>
-  </div>
-
-  <div class="section">
-    <label>Figma Access Token</label>
-    <div class="token-row">
-      <input type="password" id="tokenInput" placeholder="Personal access token" />
-      <button class="btn-sm" id="tokenToggle">Show</button>
+    <div class="section">
+      <label>Figma Access Token</label>
+      <div class="settings-row">
+        <input type="password" id="tokenInput" placeholder="Personal access token" />
+        <button class="btn-sm" id="tokenToggle">Show</button>
+      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="saveToken" checked /> Remember token
+      </label>
     </div>
-    <label class="checkbox-label">
-      <input type="checkbox" id="saveToken" checked /> Remember token
-    </label>
+
+    <details class="info">
+      <summary>How to get a token</summary>
+      <p style="margin-top:6px;">
+        1. Go to <strong>figma.com/settings</strong><br>
+        2. Scroll to <strong>Personal access tokens</strong><br>
+        3. Click <strong>Generate new token</strong><br>
+        4. Copy and paste it above
+      </p>
+    </details>
   </div>
-
-  <div class="section">
-    <label>Options</label>
-    <label class="checkbox-label">
-      <input type="checkbox" id="includeResolved" /> Include resolved comments
-    </label>
-  </div>
-
-  <button class="btn btn-primary" id="exportBtn">Export</button>
-  <div class="status" id="exportStatus"></div>
-  <button class="btn-sm" id="downloadBtn" style="display:none; width:100%; margin-top:6px;">JSON으로 다운로드</button>
-
-  <details class="info">
-    <summary>How to get a token</summary>
-    <p style="margin-top:6px;">
-      1. Go to <strong>figma.com/settings</strong><br>
-      2. Scroll to <strong>Personal access tokens</strong><br>
-      3. Click <strong>Generate new token</strong><br>
-      4. Copy and paste it above
-    </p>
-  </details>
 </div>
 
 <script>
+  // ── Global error handler ──
+  window.onerror = function(msg, src, line, col, err) {
+    console.error("[Comment Bridge] GLOBAL ERROR:", msg, "| line:", line, "| col:", col, "| err:", err);
+    document.body.insertAdjacentHTML("afterbegin",
+      '<div style="background:red;color:white;padding:8px;font-size:11px;word-break:break-all;">'
+      + 'ERROR: ' + msg + ' (line ' + line + ')</div>');
+  };
+
   // ── State ──
   let fileKey = null;
-  let fileData = null; // import file content
+  let pendingImportJson = null;
+  let lastExportJson = null;
+  let lastExportFilename = null;
+  let currentMode = null; // "import" or "export"
 
   // ── DOM refs ──
-  const tabBtns = document.querySelectorAll(".tab-btn");
-  const tabContents = document.querySelectorAll(".tab-content");
-
   // Import
-  const fileInput = document.getElementById("fileInput");
-  const fileDrop = document.getElementById("fileDrop");
-  const fileLabel = document.getElementById("fileLabel");
-  const jsonInput = document.getElementById("jsonInput");
+  const importSection = document.getElementById("importSection");
+  const importReady = document.getElementById("importReady");
+  const importPreview = document.getElementById("importPreview");
   const importBtn = document.getElementById("importBtn");
   const importStatus = document.getElementById("importStatus");
+  const sectionDivider = document.getElementById("sectionDivider");
 
-  // Export
-  const fileKeyDisplay = document.getElementById("fileKeyDisplay");
+  // Export (open mode)
+  const exportSectionOpen = document.getElementById("exportSectionOpen");
+  const includeResolvedCb = document.getElementById("includeResolved");
+  const exportBtn = document.getElementById("exportBtn");
+  const exportStatus = document.getElementById("exportStatus");
+  const exportList = document.getElementById("exportList");
+  const downloadBtn = document.getElementById("downloadBtn");
+
+  // Export (collapsed mode)
+  const exportSectionCollapsed = document.getElementById("exportSectionCollapsed");
+  const includeResolvedCollapsedCb = document.getElementById("includeResolvedCollapsed");
+  const exportBtnCollapsed = document.getElementById("exportBtnCollapsed");
+  const exportStatusCollapsed = document.getElementById("exportStatusCollapsed");
+  const exportListCollapsed = document.getElementById("exportListCollapsed");
+  const downloadBtnCollapsed = document.getElementById("downloadBtnCollapsed");
+
+  // Settings
+  const fileKeyInput = document.getElementById("fileKeyInput");
+  const fileKeyStatus = document.getElementById("fileKeyStatus");
   const tokenInput = document.getElementById("tokenInput");
   const tokenToggle = document.getElementById("tokenToggle");
   const saveTokenCb = document.getElementById("saveToken");
-  const includeResolvedCb = document.getElementById("includeResolved");
-  const exportBtn = document.getElementById("exportBtn");
-  const downloadBtn = document.getElementById("downloadBtn");
-  const exportStatus = document.getElementById("exportStatus");
 
-  // Import
-  const loadSavedBtn = document.getElementById("loadSavedBtn");
+  // Refresh
+  const refreshSavedBtn = document.getElementById("refreshSavedBtn");
 
-  let lastExportJson = null;
-  let lastExportFilename = null;
+  // ── Active export refs (point to whichever mode is active) ──
+  function getActiveExportRefs() {
+    if (currentMode === "import") {
+      return {
+        includeResolvedCb: includeResolvedCollapsedCb,
+        exportBtn: exportBtnCollapsed,
+        exportStatus: exportStatusCollapsed,
+        exportList: exportListCollapsed,
+        downloadBtn: downloadBtnCollapsed,
+      };
+    }
+    return {
+      includeResolvedCb,
+      exportBtn,
+      exportStatus,
+      exportList,
+      downloadBtn,
+    };
+  }
 
-  // ── Tab switching ──
-  tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      tabBtns.forEach((b) => b.classList.remove("active"));
-      tabContents.forEach((c) => c.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
-    });
+  // ── Mode switching ──
+  function switchToMode(mode, savedExportJson) {
+    currentMode = mode;
+
+    if (mode === "import") {
+      // Import 강조 모드
+      importSection.style.display = "block";
+      sectionDivider.style.display = "block";
+      exportSectionOpen.style.display = "none";
+      exportSectionCollapsed.style.display = "block";
+
+      if (savedExportJson) {
+        loadImportJson(savedExportJson);
+      }
+    } else {
+      // Export 강조 모드
+      importSection.style.display = "none";
+      sectionDivider.style.display = "none";
+      exportSectionOpen.style.display = "block";
+      exportSectionCollapsed.style.display = "none";
+    }
+  }
+
+  // ── Page navigation ──
+  function showPage(pageId) {
+    document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+    document.getElementById("page-" + pageId).classList.add("active");
+  }
+
+  document.getElementById("openSettingsBtn").addEventListener("click", () => {
+    showPage("settings");
   });
+
+  document.getElementById("backBtn").addEventListener("click", () => {
+    const raw = fileKeyInput.value.trim();
+    if (raw) {
+      const key = parseFigmaFileKey(raw) ?? raw;
+      applyFileKey(key);
+    }
+    if (saveTokenCb.checked && tokenInput.value.trim()) {
+      parent.postMessage({ pluginMessage: { type: "save-token", token: tokenInput.value.trim() } }, "*");
+    }
+    showPage("main");
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  //  EXPORT
+  // ══════════════════════════════════════════════════════════════════
+
+  function handleExportClick() {
+    const token = tokenInput.value.trim();
+    if (!token || !fileKey) {
+      const missing = [];
+      if (!fileKey) missing.push("File Key");
+      if (!token) missing.push("Access Token");
+      const refs = getActiveExportRefs();
+      showStatus(refs.exportStatus, "warning", missing.join("과 ") + "이 설정되지 않았습니다.\n설정(⚙)에서 입력해주세요.");
+      showPage("settings");
+      return;
+    }
+
+    const refs = getActiveExportRefs();
+    refs.exportBtn.disabled = true;
+    refs.exportBtn.textContent = "Fetching comments…";
+    showStatus(refs.exportStatus, "", "");
+    startExportFetch();
+  }
+
+  exportBtn.addEventListener("click", handleExportClick);
+  exportBtnCollapsed.addEventListener("click", handleExportClick);
+
+  downloadBtn.addEventListener("click", () => {
+    if (lastExportJson) downloadJson(lastExportJson, lastExportFilename);
+  });
+  downloadBtnCollapsed.addEventListener("click", () => {
+    if (lastExportJson) downloadJson(lastExportJson, lastExportFilename);
+  });
+
+  async function startExportFetch() {
+    const token = tokenInput.value.trim();
+    const refs = getActiveExportRefs();
+
+    if (saveTokenCb.checked) {
+      parent.postMessage({ pluginMessage: { type: "save-token", token } }, "*");
+    }
+
+    try {
+      const res = await fetch("https://api.figma.com/v1/files/" + fileKey + "/comments", {
+        headers: { "X-Figma-Token": token }
+      });
+
+      if (!res.ok) {
+        const body = await res.text();
+        if (res.status === 403 || res.status === 401) {
+          throw new Error("인증 실패: 토큰이 유효한지 확인해주세요.");
+        }
+        throw new Error("Figma API error " + res.status + ": " + body);
+      }
+
+      const data = await res.json();
+      console.log("[Comment Bridge] API response keys:", Object.keys(data));
+      const rawComments = data.meta?.comments ?? data.comments ?? [];
+      console.log("[Comment Bridge] rawComments count:", rawComments.length);
+
+      if (rawComments.length === 0) {
+        showStatus(refs.exportStatus, "warning", "이 파일에 코멘트가 없습니다.\n(file key: " + fileKey + ")");
+        refs.exportBtn.disabled = false;
+        refs.exportBtn.textContent = "Export";
+        return;
+      }
+
+      refs.exportBtn.textContent = "Resolving positions…";
+
+      // Fetch node positions from REST API for accurate coordinates
+      const nodePositions = await fetchNodePositions(fileKey, token, rawComments);
+
+      refs.exportBtn.textContent = "Processing…";
+
+      parent.postMessage({
+        pluginMessage: {
+          type: "process-export",
+          rawComments: rawComments,
+          includeResolved: refs.includeResolvedCb.checked,
+          nodePositions: nodePositions
+        }
+      }, "*");
+
+    } catch (e) {
+      showStatus(refs.exportStatus, "error", e.message);
+      refs.exportBtn.disabled = false;
+      refs.exportBtn.textContent = "Export";
+    }
+  }
 
   // ══════════════════════════════════════════════════════════════════
   //  IMPORT
   // ══════════════════════════════════════════════════════════════════
 
-  loadSavedBtn.addEventListener("click", () => {
-    parent.postMessage({ pluginMessage: { type: "load-export" } }, "*");
-    loadSavedBtn.textContent = "불러오는 중…";
-    loadSavedBtn.disabled = true;
-  });
-
-  fileInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) readFile(file);
-  });
-  fileDrop.addEventListener("dragover", (e) => { e.preventDefault(); fileDrop.classList.add("dragover"); });
-  fileDrop.addEventListener("dragleave", () => fileDrop.classList.remove("dragover"));
-  fileDrop.addEventListener("drop", (e) => {
-    e.preventDefault(); fileDrop.classList.remove("dragover");
-    const file = e.dataTransfer.files[0];
-    if (file) readFile(file);
-  });
-
-  function readFile(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      fileData = reader.result;
-      fileLabel.innerHTML = '<span class="file-name">' + escapeHtml(file.name) + "</span>";
-      jsonInput.value = "";
-    };
-    reader.readAsText(file);
-  }
-
-  jsonInput.addEventListener("input", () => {
-    if (jsonInput.value.trim()) {
-      fileData = null;
-      fileLabel.textContent = "Click or drag & drop a .json file";
-      fileInput.value = "";
-    }
-  });
-
-  importBtn.addEventListener("click", () => {
-    const raw = fileData || jsonInput.value.trim();
-    if (!raw) { showStatus(importStatus, "error", "Please upload a file or paste JSON."); return; }
-
+  function loadImportJson(raw) {
+    console.log("[Comment Bridge] loadImportJson typeof:", typeof raw, "| isString:", typeof raw === "string");
     let payload;
-    try { payload = JSON.parse(raw); }
-    catch (e) { showStatus(importStatus, "error", "유효한 JSON이 아닙니다: " + e.message); return; }
-
-    if (Array.isArray(payload)) payload = { comments: payload };
-    if (!payload.comments || !Array.isArray(payload.comments) || payload.comments.length === 0) {
-      showStatus(importStatus, "error", "코멘트가 없습니다 (comments 배열이 비어있거나 없습니다)");
+    try {
+      payload = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch (e) {
+      showStatus(importStatus, "error", "유효한 JSON이 아닙니다: " + e.message);
       return;
     }
 
+    if (Array.isArray(payload)) payload = { comments: payload };
+    if (!payload.comments || !Array.isArray(payload.comments) || payload.comments.length === 0) {
+      showStatus(importStatus, "error", "코멘트가 없습니다");
+      return;
+    }
+
+    pendingImportJson = payload;
+    importReady.innerHTML = '<div class="comment-count">' + payload.comments.length + '개 코멘트 준비됨</div>';
+    renderCommentList(importPreview, payload.comments);
+    importBtn.style.display = "block";
+    importBtn.disabled = false;
+    importBtn.textContent = "Import Now";
+  }
+
+  importBtn.addEventListener("click", () => {
+    if (!pendingImportJson) { showStatus(importStatus, "error", "불러온 export가 없습니다."); return; }
+
+    const payload = pendingImportJson;
     const errors = [];
     payload.comments.forEach((c, i) => {
       const n = i + 1;
@@ -336,13 +501,15 @@
     parent.postMessage({ pluginMessage: { type: "import-comments", payload } }, "*");
   });
 
-  // ══════════════════════════════════════════════════════════════════
-  //  EXPORT
-  // ══════════════════════════════════════════════════════════════════
-
-  downloadBtn.addEventListener("click", () => {
-    if (lastExportJson) downloadJson(lastExportJson, lastExportFilename);
+  // Refresh saved export
+  refreshSavedBtn.addEventListener("click", () => {
+    parent.postMessage({ pluginMessage: { type: "load-export", manual: true } }, "*");
+    refreshSavedBtn.textContent = "불러오는 중…";
   });
+
+  // ══════════════════════════════════════════════════════════════════
+  //  SETTINGS
+  // ══════════════════════════════════════════════════════════════════
 
   tokenToggle.addEventListener("click", () => {
     const isPassword = tokenInput.type === "password";
@@ -350,52 +517,36 @@
     tokenToggle.textContent = isPassword ? "Hide" : "Show";
   });
 
-  // ── File key from clipboard ──
   function parseFigmaFileKey(text) {
     try {
       const u = new URL(text.trim());
       const branchKey = u.searchParams.get("branch-file-key");
       if (branchKey) return branchKey;
+      const branchMatch = u.pathname.match(/\/(?:design|file|proto)\/[a-zA-Z0-9]+\/branch\/([a-zA-Z0-9]+)/);
+      if (branchMatch) return branchMatch[1];
       const m = u.pathname.match(/\/(?:design|file|proto)\/([a-zA-Z0-9]+)/);
       if (m) return m[1];
     } catch (_) {}
-    // bare key (no slashes, alphanumeric)
     if (/^[a-zA-Z0-9]{10,}$/.test(text.trim())) return text.trim();
     return null;
   }
 
-  function setFileKeyDisplay(html, canChange) {
-    fileKeyDisplay.innerHTML = "<span>" + html + "</span>" +
-      (canChange ? "<button class='btn-sm change-btn' id='changeKeyBtn'>변경</button>" : "");
-    if (canChange) {
-      document.getElementById("changeKeyBtn").addEventListener("click", () => {
-        document.getElementById("fileKeyManualSection").style.display = "block";
-      });
-    }
-  }
-
   function applyFileKey(key) {
     fileKey = key;
-    setFileKeyDisplay("File key: <code>" + escapeHtml(key) + "</code>", true);
-    document.getElementById("fileKeyManualSection").style.display = "none";
+    fileKeyInput.value = key;
+    fileKeyStatus.innerHTML = "Current: <code>" + escapeHtml(key) + "</code>";
+    parent.postMessage({ pluginMessage: { type: "save-filekey", fileKey: key } }, "*");
   }
 
-  document.getElementById("pasteUrlBtn").addEventListener("click", async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      const key = parseFigmaFileKey(text);
-      if (key) {
-        applyFileKey(key);
-      } else {
-        document.getElementById("fileKeyManualInput").value = text;
-        showStatus(exportStatus, "warning", "Figma URL을 인식하지 못했습니다. file key를 직접 입력해주세요.");
-      }
-    } catch (_) {
-      showStatus(exportStatus, "warning", "클립보드 접근 권한이 없습니다. 아래에 직접 입력해주세요.");
+  function updateFileKeyDisplay() {
+    if (fileKey) {
+      fileKeyStatus.innerHTML = '<span class="set">Current: <code>' + escapeHtml(fileKey) + '</code></span>';
+    } else {
+      fileKeyStatus.innerHTML = '<span class="unset">설정되지 않음</span>';
     }
-  });
+  }
 
-  document.getElementById("fileKeyManualInput").addEventListener("paste", (e) => {
+  fileKeyInput.addEventListener("paste", (e) => {
     const text = (e.clipboardData || window.clipboardData).getData("text");
     const key = parseFigmaFileKey(text);
     if (key) {
@@ -403,81 +554,6 @@
       applyFileKey(key);
     }
   });
-
-  exportBtn.addEventListener("click", () => {
-    const token = tokenInput.value.trim();
-    if (!token) { showStatus(exportStatus, "error", "Access token을 입력해주세요."); return; }
-
-    // Use manually entered file key if provided
-    const manualKey = document.getElementById("fileKeyManualInput").value.trim();
-    if (manualKey) {
-      fileKey = parseFigmaFileKey(manualKey) ?? manualKey;
-      setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
-      document.getElementById("fileKeyManualSection").style.display = "none";
-    }
-
-    exportBtn.disabled = true;
-    exportBtn.textContent = "Checking file…";
-    showStatus(exportStatus, "", "");
-
-    if (fileKey) {
-      // Already have fileKey (auto-detected or manual), proceed directly
-      startExportFetch();
-    } else {
-      // Request fresh fileKey from plugin before proceeding
-      parent.postMessage({ pluginMessage: { type: "request-filekey" } }, "*");
-    }
-  });
-
-  async function startExportFetch() {
-    const token = tokenInput.value.trim();
-    exportBtn.textContent = "Fetching comments…";
-
-    // Save token if checkbox is checked
-    if (saveTokenCb.checked) {
-      parent.postMessage({ pluginMessage: { type: "save-token", token } }, "*");
-    }
-
-    try {
-      const res = await fetch("https://api.figma.com/v1/files/" + fileKey + "/comments", {
-        headers: { "X-Figma-Token": token }
-      });
-
-      if (!res.ok) {
-        const body = await res.text();
-        if (res.status === 403 || res.status === 401) {
-          throw new Error("인증 실패: 토큰이 유효한지 확인해주세요.");
-        }
-        throw new Error("Figma API error " + res.status + ": " + body);
-      }
-
-      const data = await res.json();
-      const rawComments = data.meta?.comments ?? data.comments ?? [];
-
-      if (rawComments.length === 0) {
-        showStatus(exportStatus, "warning", "이 파일에 코멘트가 없습니다.");
-        exportBtn.disabled = false;
-        exportBtn.textContent = "Export JSON";
-        return;
-      }
-
-      exportBtn.textContent = "Processing…";
-
-      // Send raw comments to plugin for position resolution
-      parent.postMessage({
-        pluginMessage: {
-          type: "process-export",
-          rawComments: rawComments,
-          includeResolved: includeResolvedCb.checked
-        }
-      }, "*");
-
-    } catch (e) {
-      showStatus(exportStatus, "error", e.message);
-      exportBtn.disabled = false;
-      exportBtn.textContent = "Export JSON";
-    }
-  }
 
   // ══════════════════════════════════════════════════════════════════
   //  Messages from plugin
@@ -487,47 +563,36 @@
     const msg = event.data.pluginMessage;
     if (!msg) return;
 
+    try {
     switch (msg.type) {
       case "init":
         fileKey = msg.fileKey ?? null;
-        if (fileKey) {
-          setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
-        } else {
-          // fileKey not ready yet at init — request a fresh one, will show manual input if still unavailable
-          parent.postMessage({ pluginMessage: { type: "request-filekey" } }, "*");
-          setFileKeyDisplay("File key: <code>detecting…</code>", false);
-        }
+        if (fileKey) fileKeyInput.value = fileKey;
+        updateFileKeyDisplay();
         if (msg.savedToken) {
           tokenInput.value = msg.savedToken;
         }
         if (msg.savedExport) {
-          document.getElementById("jsonInput").value = msg.savedExport;
-          showStatus(importStatus, "success", "브랜치 export가 감지되었습니다. Import 버튼을 눌러 적용하세요.");
+          switchToMode("import", msg.savedExport);
+        } else {
+          switchToMode("export");
         }
         break;
 
       case "filekey-response":
         fileKey = msg.fileKey ?? null;
-        if (fileKey) {
-          setFileKeyDisplay("File key: <code>" + escapeHtml(fileKey) + "</code>", true);
-          document.getElementById("fileKeyManualSection").style.display = "none";
-          if (exportBtn.disabled) {
-            startExportFetch();
-          }
-        } else {
-          setFileKeyDisplay("File key: <code style='color:var(--error)'>unavailable</code>", false);
-          document.getElementById("fileKeyManualSection").style.display = "block";
-          if (exportBtn.disabled) {
-            showStatus(exportStatus, "warning", "File key를 자동으로 가져올 수 없습니다.\nFigma URL에서 file key를 아래에 직접 입력 후 다시 Export를 눌러주세요.");
-            exportBtn.disabled = false;
-            exportBtn.textContent = "Export JSON";
-          }
-        }
+        if (fileKey) fileKeyInput.value = fileKey;
+        updateFileKeyDisplay();
+        break;
+
+      case "import-progress":
+        importBtn.textContent = "Importing… (" + msg.current + "/" + msg.total + ")";
+        showStatus(importStatus, "success", "페이지 처리 중: " + msg.pageName + " (" + msg.current + "/" + msg.total + ")");
         break;
 
       case "import-complete":
         importBtn.disabled = false;
-        importBtn.textContent = "Import Comments";
+        importBtn.textContent = "Import Now";
         if (msg.failed > 0 || msg.unplaced > 0) {
           const parts = [];
           if (msg.placed > 0) parts.push(msg.placed + " placed");
@@ -550,41 +615,63 @@
 
       case "import-error":
         importBtn.disabled = false;
-        importBtn.textContent = "Import Comments";
+        importBtn.textContent = "Import Now";
         showStatus(importStatus, "error", "Error: " + msg.error);
         break;
 
-      case "export-ready":
-        exportBtn.disabled = false;
-        exportBtn.textContent = "Export";
+      case "export-ready": {
+        const refs = getActiveExportRefs();
+        refs.exportBtn.disabled = false;
+        refs.exportBtn.textContent = "Export";
         lastExportJson = msg.json;
         lastExportFilename = msg.filename;
-        downloadBtn.style.display = "none";
-        showStatus(exportStatus, "", "파일에 저장 중…");
+        refs.downloadBtn.style.display = "none";
+        showStatus(refs.exportStatus, "", "파일에 저장 중…");
+        try {
+          const parsed = JSON.parse(msg.json);
+          renderCommentList(refs.exportList, parsed.comments || []);
+        } catch(e) {}
         parent.postMessage({ pluginMessage: { type: "save-export", json: msg.json } }, "*");
         break;
+      }
 
-      case "export-saved":
-        showStatus(exportStatus, "success", "Figma 파일에 저장되었습니다.\nImport 탭에서 바로 불러올 수 있습니다.");
-        downloadBtn.style.display = "block";
+      case "export-saved": {
+        const refs = getActiveExportRefs();
+        showStatus(refs.exportStatus, "success", "Export 완료!");
+        refs.downloadBtn.style.display = "block";
+        // Export 후 Import 모드로 전환
+        if (lastExportJson) {
+          switchToMode("import", lastExportJson);
+          showStatus(importStatus, "success", "Export 완료! Import 버튼을 눌러 포스트잇으로 재현하세요.");
+        }
         break;
+      }
 
       case "export-load-result":
-        loadSavedBtn.textContent = "저장된 export 불러오기";
-        loadSavedBtn.disabled = false;
+        refreshSavedBtn.textContent = "저장된 export 새로고침 ↻";
         if (msg.json) {
-          document.getElementById("jsonInput").value = msg.json;
-          showStatus(importStatus, "success", "저장된 export를 불러왔습니다. Import 버튼을 눌러 적용하세요.");
+          switchToMode("import", msg.json);
+          if (msg.manual) {
+            showStatus(importStatus, "success", "저장된 export를 불러왔습니다. Import 버튼을 눌러 적용하세요.");
+          }
         } else {
-          showStatus(importStatus, "warning", "저장된 export가 없습니다.\nExport 탭에서 먼저 export 후 '파일에 저장'을 눌러주세요.");
+          if (msg.manual) {
+            switchToMode("export");
+            showStatus(importStatus, "warning", "저장된 export가 없습니다.\n먼저 Export를 실행해주세요.");
+          }
         }
         break;
 
-      case "export-error":
-        exportBtn.disabled = false;
-        exportBtn.textContent = "Export JSON";
-        showStatus(exportStatus, "error", msg.error);
+      case "export-error": {
+        const refs = getActiveExportRefs();
+        refs.exportBtn.disabled = false;
+        refs.exportBtn.textContent = "Export";
+        showStatus(refs.exportStatus, "error", msg.error);
         break;
+      }
+    }
+    } catch (e) {
+      console.error("[Comment Bridge] UI ERROR:", e, e.stack);
     }
   };
 
@@ -593,6 +680,9 @@
   // ══════════════════════════════════════════════════════════════════
 
   function showStatus(el, type, text) {
+    if (text && text.toString().includes("not a function")) {
+      console.error("[Comment Bridge] FOUND IT! caller:", new Error().stack);
+    }
     el.className = "status" + (type ? " " + type : "");
     el.textContent = text;
   }
@@ -601,6 +691,159 @@
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  async function fetchNodePositions(fKey, token, rawComments) {
+    const nodeIds = [...new Set(
+      rawComments
+        .filter(function(c) { return c.client_meta && c.client_meta.node_id; })
+        .map(function(c) { return c.client_meta.node_id; })
+    )];
+
+    if (nodeIds.length === 0) return {};
+
+    try {
+      var encodedIds = nodeIds.map(function(id) { return encodeURIComponent(id); }).join(",");
+      console.log("[Comment Bridge] fetching node positions for", nodeIds.length, "nodes:", nodeIds);
+
+      // 1. /nodes endpoint: reliable absoluteBoundingBox for each node
+      var nodesUrl = "https://api.figma.com/v1/files/" + fKey + "/nodes?ids=" + encodedIds;
+      var fileUrl = "https://api.figma.com/v1/files/" + fKey + "?ids=" + encodedIds + "&depth=0";
+      var headers = { "X-Figma-Token": token };
+
+      var [nodesRes, fileRes] = await Promise.all([
+        fetch(nodesUrl, { headers: headers }),
+        fetch(fileUrl, { headers: headers })
+      ]);
+
+      var positions = {};
+
+      // Parse /nodes response for absoluteBoundingBox
+      if (nodesRes.ok) {
+        var nodesData = await nodesRes.json();
+        console.log("[Comment Bridge] /nodes response keys:", Object.keys(nodesData));
+        for (var nid of nodeIds) {
+          var entry = nodesData.nodes && nodesData.nodes[nid];
+          if (entry && entry.document) {
+            var doc = entry.document;
+            if (doc.absoluteBoundingBox) {
+              positions[nid] = {
+                absX: doc.absoluteBoundingBox.x,
+                absY: doc.absoluteBoundingBox.y,
+                width: doc.absoluteBoundingBox.width,
+                height: doc.absoluteBoundingBox.height,
+                pageName: "",
+                frameName: ""
+              };
+            } else if (doc.type === "CANVAS") {
+              // Page node: no bounding box, use 0,0 and page name
+              positions[nid] = {
+                absX: 0, absY: 0, width: 0, height: 0,
+                pageName: doc.name || "",
+                frameName: ""
+              };
+            }
+          }
+        }
+        console.log("[Comment Bridge] /nodes resolved positions:", Object.keys(positions).length);
+      } else {
+        console.log("[Comment Bridge] /nodes fetch failed:", nodesRes.status);
+      }
+
+      // Parse /files?ids= response for page/frame names via tree traversal
+      if (fileRes.ok) {
+        var fileData = await fileRes.json();
+        if (fileData.document) {
+          var pageFrameInfo = {};
+          traverseFileTree(fileData.document, null, null, pageFrameInfo, nodeIds);
+          // Merge page/frame info into positions
+          for (var pid in pageFrameInfo) {
+            if (positions[pid]) {
+              positions[pid].pageName = pageFrameInfo[pid].pageName;
+              positions[pid].frameName = pageFrameInfo[pid].frameName;
+            } else {
+              positions[pid] = pageFrameInfo[pid];
+            }
+          }
+          console.log("[Comment Bridge] /files tree resolved:", Object.keys(pageFrameInfo).length);
+        } else {
+          console.log("[Comment Bridge] /files response has no document key:", Object.keys(fileData));
+        }
+      } else {
+        console.log("[Comment Bridge] /files fetch failed:", fileRes.status);
+      }
+
+      var resolvedCount = Object.keys(positions).length;
+      console.log("[Comment Bridge] total resolved:", resolvedCount, "/", nodeIds.length);
+      if (resolvedCount < nodeIds.length) {
+        var missed = nodeIds.filter(function(id) { return !positions[id]; });
+        console.log("[Comment Bridge] unresolved nodes:", missed);
+      }
+      return positions;
+    } catch (e) {
+      console.error("[Comment Bridge] fetchNodePositions error:", e);
+      return {};
+    }
+  }
+
+  function traverseFileTree(node, currentPage, topFrame, positions, targetIds) {
+    if (!node) return;
+
+    if (node.type === "CANVAS") {
+      currentPage = node.name;
+      topFrame = null;
+    }
+
+    // Direct child of a page = top-level frame
+    if (currentPage && !topFrame && node.type !== "CANVAS" && node.type !== "DOCUMENT") {
+      topFrame = node.name;
+    }
+
+    if (targetIds.indexOf(node.id) !== -1 && node.absoluteBoundingBox) {
+      positions[node.id] = {
+        absX: node.absoluteBoundingBox.x,
+        absY: node.absoluteBoundingBox.y,
+        width: node.absoluteBoundingBox.width,
+        height: node.absoluteBoundingBox.height,
+        pageName: currentPage || "",
+        frameName: topFrame || ""
+      };
+    }
+
+    if (node.children) {
+      for (var i = 0; i < node.children.length; i++) {
+        traverseFileTree(node.children[i], currentPage, topFrame, positions, targetIds);
+      }
+    }
+  }
+
+  function renderCommentList(container, comments) {
+    let html = '<div class="comment-list">';
+    comments.forEach((c) => {
+      html += '<div class="comment-item" data-comment-id="' + escapeHtml(c.originalCommentId || '') + '">'
+        + '<span class="comment-author">' + escapeHtml(c.author) + '</span>'
+        + (c.pageName ? '<span class="comment-page">' + escapeHtml(c.pageName) + '</span>' : '')
+        + '<div class="comment-message">' + escapeHtml(c.message) + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Click-to-navigate: delegate clicks on comment items
+    // Use a named handler ref to avoid duplicate listeners
+    if (container._commentClickHandler) {
+      container.removeEventListener("click", container._commentClickHandler);
+    }
+    container._commentClickHandler = function(e) {
+      var item = e.target.closest(".comment-item[data-comment-id]");
+      console.log("[Comment Bridge] click:", e.target.tagName, "| item:", !!item, "| id:", item && item.dataset.commentId);
+      if (item && item.dataset.commentId) {
+        parent.postMessage({
+          pluginMessage: { type: "navigate-to-comment", commentId: item.dataset.commentId }
+        }, "*");
+      }
+    };
+    container.addEventListener("click", container._commentClickHandler);
   }
 
   function downloadJson(json, filename) {

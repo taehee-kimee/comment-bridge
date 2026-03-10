@@ -27,6 +27,7 @@
   var UNPLACED_SECTION_NAME = "\u{1F4CC} Unplaced";
   var TOKEN_STORAGE_KEY = "figmaToken";
   var EXPORT_DATA_KEY = "savedExport";
+  var commentNodeMap = /* @__PURE__ */ new Map();
   var COLORS = {
     bg: { r: 1, g: 0.96, b: 0.75 },
     shadow: { r: 0, g: 0, b: 0, a: 0.12 },
@@ -41,130 +42,213 @@
   figma.showUI(__html__, { width: 440, height: 560, themeColors: true });
   (async () => {
     var _a;
-    const savedToken = (_a = await figma.clientStorage.getAsync(TOKEN_STORAGE_KEY)) != null ? _a : "";
-    sendToUI({
-      type: "init",
-      fileKey: figma.fileKey,
-      savedToken: String(savedToken)
-    });
+    try {
+      const [savedToken, savedExport] = await Promise.all([
+        figma.clientStorage.getAsync(TOKEN_STORAGE_KEY),
+        figma.clientStorage.getAsync(EXPORT_DATA_KEY)
+      ]);
+      const savedFileKey = figma.root.getPluginData("fileKey") || void 0;
+      const detectedFileKey = (_a = savedFileKey != null ? savedFileKey : figma.fileKey) != null ? _a : void 0;
+      console.log("[Comment Bridge] init OK | fileKey:", detectedFileKey, "| hasToken:", !!savedToken, "| hasExport:", !!savedExport);
+      sendToUI({
+        type: "init",
+        fileKey: detectedFileKey,
+        savedToken: String(savedToken != null ? savedToken : ""),
+        savedExport: savedExport != null ? savedExport : null
+      });
+    } catch (e) {
+      console.error("[Comment Bridge] INIT ERROR:", e);
+      figma.notify("Init error: " + String(e), { error: true });
+    }
   })();
   figma.ui.onmessage = async (msg) => {
-    switch (msg.type) {
-      case "import-comments":
-        try {
-          await importComments(msg.payload);
-        } catch (e) {
+    var _a, _b;
+    try {
+      switch (msg.type) {
+        case "import-comments":
+          try {
+            await importComments(msg.payload);
+          } catch (e) {
+            const errMsg = e instanceof Error ? e.message + " | stack: " + e.stack : String(e);
+            console.error("[Comment Bridge] IMPORT ERROR:", errMsg);
+            sendToUI({
+              type: "import-error",
+              error: errMsg
+            });
+          }
+          break;
+        case "process-export":
+          try {
+            const result = processExport(msg.rawComments, msg.includeResolved, msg.nodePositions);
+            const filename = `figma-comments-export-${todayStr()}.json`;
+            sendToUI({
+              type: "export-ready",
+              json: JSON.stringify(result, null, 2),
+              filename
+            });
+          } catch (e) {
+            sendToUI({
+              type: "export-error",
+              error: e instanceof Error ? e.message : String(e)
+            });
+          }
+          break;
+        case "save-token":
+          await figma.clientStorage.setAsync(TOKEN_STORAGE_KEY, msg.token);
+          break;
+        case "request-filekey":
           sendToUI({
-            type: "import-error",
-            error: e instanceof Error ? e.message : String(e)
+            type: "filekey-response",
+            fileKey: ((_a = figma.fileKey) != null ? _a : figma.root.getPluginData("fileKey")) || void 0
           });
+          break;
+        case "save-filekey":
+          figma.root.setPluginData("fileKey", msg.fileKey);
+          break;
+        case "save-export":
+          await figma.clientStorage.setAsync(EXPORT_DATA_KEY, msg.json);
+          sendToUI({ type: "export-saved" });
+          break;
+        case "load-export": {
+          const saved = (_b = await figma.clientStorage.getAsync(EXPORT_DATA_KEY)) != null ? _b : null;
+          sendToUI({ type: "export-load-result", json: saved, manual: !!msg.manual });
+          break;
         }
-        break;
-      case "process-export":
-        try {
-          const result = processExport(msg.rawComments, msg.includeResolved);
-          const filename = `figma-comments-export-${todayStr()}.json`;
-          sendToUI({
-            type: "export-ready",
-            json: JSON.stringify(result, null, 2),
-            filename
-          });
-        } catch (e) {
-          sendToUI({
-            type: "export-error",
-            error: e instanceof Error ? e.message : String(e)
-          });
+        case "navigate-to-comment": {
+          console.log("[Comment Bridge] navigate-to-comment:", msg.commentId, "| map size:", commentNodeMap.size);
+          let targetNode = null;
+          const cachedNodeId = commentNodeMap.get(msg.commentId);
+          if (cachedNodeId) {
+            targetNode = figma.getNodeById(cachedNodeId);
+            console.log("[Comment Bridge] cache hit:", cachedNodeId, "| found:", !!targetNode);
+          }
+          if (!targetNode) {
+            console.log("[Comment Bridge] cache miss, searching all pages\u2026");
+            for (const page of figma.root.children) {
+              const found = page.findOne(
+                (n) => n.getPluginData("originalCommentId") === msg.commentId
+              );
+              if (found) {
+                targetNode = found;
+                commentNodeMap.set(msg.commentId, found.id);
+                break;
+              }
+            }
+          }
+          if (targetNode) {
+            const page = findPage(targetNode);
+            if (page) figma.currentPage = page;
+            figma.currentPage.selection = [targetNode];
+            figma.viewport.scrollAndZoomIntoView([targetNode]);
+          } else {
+            figma.notify("\uD574\uB2F9 \uCF54\uBA58\uD2B8\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 Import\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.", { error: true });
+          }
+          break;
         }
-        break;
-      case "save-token":
-        await figma.clientStorage.setAsync(TOKEN_STORAGE_KEY, msg.token);
-        break;
-      case "request-filekey":
-        sendToUI({
-          type: "filekey-response",
-          fileKey: figma.fileKey
-        });
-        break;
-      case "save-export":
-        figma.root.setPluginData(EXPORT_DATA_KEY, msg.json);
-        sendToUI({ type: "export-saved" });
-        break;
-      case "load-export": {
-        const saved = figma.root.getPluginData(EXPORT_DATA_KEY);
-        sendToUI({ type: "export-load-result", json: saved || null });
-        break;
       }
+    } catch (e) {
+      console.error("[Comment Bridge] MSG ERROR:", e);
+      figma.notify("Error: " + String(e), { error: true });
     }
   };
   function sendToUI(msg) {
     figma.ui.postMessage(msg);
   }
   async function importComments(payload) {
-    var _a, _b;
-    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-    await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
-    const results = [];
-    const placedNodes = [];
-    const unplacedNodes = [];
+    var _a, _b, _c, _d;
+    await Promise.all([
+      figma.loadFontAsync({ family: "Inter", style: "Regular" }),
+      figma.loadFontAsync({ family: "Inter", style: "Semi Bold" })
+    ]);
+    const pageMap = /* @__PURE__ */ new Map();
+    for (const page of figma.root.children) {
+      pageMap.set(page.name, page);
+    }
+    const commentsByPage = /* @__PURE__ */ new Map();
     for (const comment of payload.comments) {
-      const fail = validateImportComment(comment);
-      if (fail) {
-        results.push({
-          originalCommentId: (_a = comment.originalCommentId) != null ? _a : "unknown",
-          status: "failed",
-          reason: fail
-        });
-        console.error(
-          `[Comment Bridge] SKIP ${comment.originalCommentId}: ${fail}`
-        );
-        continue;
+      const page = comment.pageName || "";
+      const arr = (_a = commentsByPage.get(page)) != null ? _a : [];
+      arr.push(comment);
+      commentsByPage.set(page, arr);
+    }
+    const results = [];
+    let lastGroup = null;
+    let lastPage = null;
+    const pageEntries = [...commentsByPage.entries()];
+    const totalPages = pageEntries.length;
+    let pageIdx = 0;
+    for (const [pageName, comments] of pageEntries) {
+      pageIdx++;
+      sendToUI({ type: "import-progress", current: pageIdx, total: totalPages, pageName: pageName || "unknown" });
+      const targetPage = (_b = pageMap.get(pageName)) != null ? _b : figma.currentPage;
+      const needsFrameIndex = comments.some((c) => c.frameName && c.frameName.length > 0);
+      const frameIndex = needsFrameIndex ? buildFrameIndex(targetPage) : /* @__PURE__ */ new Map();
+      const placedNodes = [];
+      const unplacedNodes = [];
+      for (const comment of comments) {
+        const fail = validateImportComment(comment);
+        if (fail) {
+          results.push({
+            originalCommentId: (_c = comment.originalCommentId) != null ? _c : "unknown",
+            status: "failed",
+            reason: fail
+          });
+          continue;
+        }
+        const placement = resolveImportPosition(comment, frameIndex);
+        const postIt = createPostIt(comment);
+        postIt.setPluginData("originalCommentId", comment.originalCommentId);
+        commentNodeMap.set(comment.originalCommentId, postIt.id);
+        if (payload.exportSessionId) {
+          postIt.setPluginData("exportSessionId", payload.exportSessionId);
+        }
+        if ((_d = payload.source) == null ? void 0 : _d.branchName) {
+          postIt.setPluginData("branchName", payload.source.branchName);
+        }
+        if (placement) {
+          placedNodes.push({ node: postIt, x: placement.x, y: placement.y });
+          results.push({
+            originalCommentId: comment.originalCommentId,
+            status: "placed"
+          });
+        } else {
+          addMetaLabel(postIt, `frameName: ${comment.frameName}`);
+          unplacedNodes.push(postIt);
+          results.push({
+            originalCommentId: comment.originalCommentId,
+            status: "unplaced",
+            reason: `Frame "${comment.frameName}" not found`
+          });
+        }
       }
-      const placement = resolveImportPosition(comment);
-      const postIt = createPostIt(comment);
-      postIt.setPluginData("originalCommentId", comment.originalCommentId);
-      if (payload.exportSessionId) {
-        postIt.setPluginData("exportSessionId", payload.exportSessionId);
+      applyStacking(placedNodes);
+      for (const { node, x, y } of placedNodes) {
+        node.x = x;
+        node.y = y;
       }
-      if ((_b = payload.source) == null ? void 0 : _b.branchName) {
-        postIt.setPluginData("branchName", payload.source.branchName);
-      }
-      if (placement) {
-        placedNodes.push({ node: postIt, x: placement.x, y: placement.y });
-        results.push({
-          originalCommentId: comment.originalCommentId,
-          status: "placed"
-        });
-      } else {
-        addMetaLabel(postIt, `frameName: ${comment.frameName}`);
-        unplacedNodes.push(postIt);
-        results.push({
-          originalCommentId: comment.originalCommentId,
-          status: "unplaced",
-          reason: `Frame "${comment.frameName}" not found`
-        });
+      const allNodes = [
+        ...placedNodes.map((p) => p.node),
+        ...unplacedNodes
+      ];
+      if (allNodes.length > 0) {
+        const group = createGroupFrame();
+        group.name = `${GROUP_FRAME_NAME} (${pageName || "unknown page"})`;
+        if (unplacedNodes.length > 0) {
+          const section = createUnplacedSection(unplacedNodes);
+          group.appendChild(section);
+        }
+        for (const { node } of placedNodes) {
+          group.appendChild(node);
+        }
+        targetPage.appendChild(group);
+        lastGroup = group;
+        lastPage = targetPage;
       }
     }
-    applyStacking(placedNodes);
-    for (const { node, x, y } of placedNodes) {
-      node.x = x;
-      node.y = y;
-    }
-    const allNodes = [
-      ...placedNodes.map((p) => p.node),
-      ...unplacedNodes
-    ];
-    if (allNodes.length > 0) {
-      const group = createGroupFrame();
-      if (unplacedNodes.length > 0) {
-        const section = createUnplacedSection(unplacedNodes);
-        group.appendChild(section);
-      }
-      for (const { node } of placedNodes) {
-        group.appendChild(node);
-      }
-      figma.currentPage.appendChild(group);
-      figma.currentPage.selection = [group];
-      figma.viewport.scrollAndZoomIntoView([group]);
+    if (lastGroup && lastPage) {
+      figma.currentPage = lastPage;
+      figma.currentPage.selection = [lastGroup];
+      figma.viewport.scrollAndZoomIntoView([lastGroup]);
     }
     const placed = results.filter((r) => r.status === "placed").length;
     const unplaced = results.filter((r) => r.status === "unplaced").length;
@@ -173,6 +257,19 @@
       `Imported: ${placed} placed, ${unplaced} unplaced, ${failed} failed`
     );
     sendToUI({ type: "import-complete", placed, unplaced, failed, results });
+  }
+  function buildFrameIndex(page) {
+    var _a;
+    const frameIndex = /* @__PURE__ */ new Map();
+    const allFrames = page.findAllWithCriteria({
+      types: ["FRAME", "COMPONENT", "SECTION"]
+    });
+    for (const n of allFrames) {
+      const arr = (_a = frameIndex.get(n.name)) != null ? _a : [];
+      arr.push(n);
+      frameIndex.set(n.name, arr);
+    }
+    return frameIndex;
   }
   function validateImportComment(c) {
     if (!c.originalCommentId) return "missing originalCommentId";
@@ -184,8 +281,8 @@
       return "missing coordinates (need relativeX/Y or absoluteX/Y)";
     return null;
   }
-  function resolveImportPosition(comment) {
-    const targetFrame = findFrameByName(comment.frameName);
+  function resolveImportPosition(comment, frameIndex) {
+    const targetFrame = findFrameByName(comment.frameName, frameIndex);
     if (!targetFrame) {
       if (comment.absoluteX !== void 0 && comment.absoluteY !== void 0) {
         return {
@@ -210,10 +307,9 @@
     y += PLACEMENT_OFFSET_Y;
     return { x, y };
   }
-  function findFrameByName(name) {
-    const matches = figma.currentPage.findAll(
-      (n) => n.name === name && (n.type === "FRAME" || n.type === "COMPONENT" || n.type === "SECTION")
-    );
+  function findFrameByName(name, frameIndex) {
+    var _a;
+    const matches = (_a = frameIndex.get(name)) != null ? _a : [];
     if (matches.length === 0) return null;
     if (matches.length === 1) return matches[0];
     const sel = figma.currentPage.selection;
@@ -246,12 +342,18 @@
       }
     }
   }
-  function processExport(rawComments, includeResolved) {
+  function processExport(rawComments, includeResolved, nodePositions) {
     var _a, _b, _c, _d;
     const filtered = includeResolved ? rawComments : rawComments.filter((c) => !c.resolved_at);
+    console.log("[Comment Bridge] processExport: raw=" + rawComments.length + " filtered=" + filtered.length + " includeResolved=" + includeResolved);
+    if (filtered.length > 0) {
+      console.log("[Comment Bridge] sample comment keys:", JSON.stringify(Object.keys(filtered[0])));
+      console.log("[Comment Bridge] sample parent_id:", JSON.stringify(filtered[0].parent_id), "resolved_at:", JSON.stringify(filtered[0].resolved_at));
+    }
     const topLevel = filtered.filter(
       (c) => !c.parent_id || c.parent_id === ""
     );
+    console.log("[Comment Bridge] topLevel=" + topLevel.length);
     const repliesMap = /* @__PURE__ */ new Map();
     for (const c of filtered) {
       if (c.parent_id && c.parent_id !== "") {
@@ -262,7 +364,7 @@
     }
     const comments = [];
     for (const c of topLevel) {
-      const pos = resolveExportPosition(c.client_meta);
+      const pos = resolveExportPosition(c.client_meta, nodePositions);
       const thread = ((_b = repliesMap.get(c.id)) != null ? _b : []).map((r) => ({
         author: r.user.handle,
         message: r.message
@@ -286,8 +388,8 @@
       comments
     };
   }
-  function resolveExportPosition(meta) {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+  function resolveExportPosition(meta, nodePositions) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
     if (meta.node_id) {
       const node = figma.getNodeById(meta.node_id);
       if (node && "absoluteTransform" in node) {
@@ -318,12 +420,26 @@
           absoluteY: Math.round(commentY)
         };
       }
+      const apiPos = nodePositions[meta.node_id];
+      if (apiPos) {
+        const commentX = apiPos.absX + ((_h = (_g = meta.node_offset) == null ? void 0 : _g.x) != null ? _h : 0);
+        const commentY = apiPos.absY + ((_j = (_i = meta.node_offset) == null ? void 0 : _i.y) != null ? _j : 0);
+        return {
+          pageName: apiPos.pageName,
+          frameName: apiPos.frameName,
+          nodeId: meta.node_id,
+          relativeX: apiPos.width > 0 ? ((_l = (_k = meta.node_offset) == null ? void 0 : _k.x) != null ? _l : 0) / apiPos.width : void 0,
+          relativeY: apiPos.height > 0 ? ((_n = (_m = meta.node_offset) == null ? void 0 : _m.y) != null ? _n : 0) / apiPos.height : void 0,
+          absoluteX: Math.round(commentX),
+          absoluteY: Math.round(commentY)
+        };
+      }
     }
     return {
       pageName: "",
       frameName: "",
-      absoluteX: Math.round((_g = meta.x) != null ? _g : 0),
-      absoluteY: Math.round((_h = meta.y) != null ? _h : 0)
+      absoluteX: Math.round((_o = meta.x) != null ? _o : 0),
+      absoluteY: Math.round((_p = meta.y) != null ? _p : 0)
     };
   }
   function findTopLevelFrame(node) {
@@ -346,6 +462,8 @@
     return null;
   }
   function createPostIt(comment) {
+    const BOLD = { family: "Inter", style: "Semi Bold" };
+    const REGULAR = { family: "Inter", style: "Regular" };
     const frame = figma.createFrame();
     const label = comment.message.length > 30 ? comment.message.substring(0, 30) + "\u2026" : comment.message;
     frame.name = `\u{1F4AC} ${comment.author}: ${label}`;
@@ -357,70 +475,25 @@
     frame.paddingRight = 14;
     frame.paddingTop = 12;
     frame.paddingBottom = 12;
-    frame.itemSpacing = 8;
     frame.cornerRadius = 6;
     frame.fills = [{ type: "SOLID", color: COLORS.bg }];
-    frame.effects = [
-      {
-        type: "DROP_SHADOW",
-        color: COLORS.shadow,
-        offset: { x: 0, y: 2 },
-        radius: 8,
-        spread: 0,
-        visible: true,
-        blendMode: "NORMAL"
-      }
-    ];
-    const authorText = figma.createText();
-    authorText.fontName = { family: "Inter", style: "Semi Bold" };
-    authorText.characters = comment.author;
-    authorText.fontSize = 12;
-    authorText.fills = [{ type: "SOLID", color: COLORS.authorText }];
-    frame.appendChild(authorText);
-    authorText.layoutSizingHorizontal = "FILL";
-    const messageText = figma.createText();
-    messageText.fontName = { family: "Inter", style: "Regular" };
-    messageText.characters = comment.message;
-    messageText.fontSize = 13;
-    messageText.lineHeight = { value: 18, unit: "PIXELS" };
-    messageText.fills = [{ type: "SOLID", color: COLORS.messageText }];
-    frame.appendChild(messageText);
-    messageText.layoutSizingHorizontal = "FILL";
-    messageText.textAutoResize = "HEIGHT";
+    frame.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.8, b: 0.6 } }];
+    frame.strokeWeight = 1;
+    let fullText = comment.author + "\n" + comment.message;
     if (comment.thread && comment.thread.length > 0) {
-      const sep = figma.createFrame();
-      sep.resize(POST_IT_WIDTH - 28, 1);
-      sep.fills = [{ type: "SOLID", color: COLORS.separator }];
-      frame.appendChild(sep);
-      sep.layoutSizingHorizontal = "FILL";
-      for (const reply of comment.thread) {
-        const replyContainer = figma.createFrame();
-        replyContainer.layoutMode = "VERTICAL";
-        replyContainer.primaryAxisSizingMode = "AUTO";
-        replyContainer.counterAxisSizingMode = "AUTO";
-        replyContainer.itemSpacing = 2;
-        replyContainer.paddingLeft = 10;
-        replyContainer.fills = [];
-        frame.appendChild(replyContainer);
-        replyContainer.layoutSizingHorizontal = "FILL";
-        const replyAuthor = figma.createText();
-        replyAuthor.fontName = { family: "Inter", style: "Semi Bold" };
-        replyAuthor.characters = `\u21B3 ${reply.author}`;
-        replyAuthor.fontSize = 11;
-        replyAuthor.fills = [{ type: "SOLID", color: COLORS.replyAuthor }];
-        replyContainer.appendChild(replyAuthor);
-        replyAuthor.layoutSizingHorizontal = "FILL";
-        const replyMsg = figma.createText();
-        replyMsg.fontName = { family: "Inter", style: "Regular" };
-        replyMsg.characters = reply.message;
-        replyMsg.fontSize = 12;
-        replyMsg.lineHeight = { value: 16, unit: "PIXELS" };
-        replyMsg.fills = [{ type: "SOLID", color: COLORS.replyText }];
-        replyContainer.appendChild(replyMsg);
-        replyMsg.layoutSizingHorizontal = "FILL";
-        replyMsg.textAutoResize = "HEIGHT";
-      }
+      const replyText = comment.thread.map((r) => `\u21B3 ${r.author}: ${r.message}`).join("\n");
+      fullText += "\n\u2500\u2500\u2500\n" + replyText;
     }
+    const textNode = figma.createText();
+    textNode.fontName = REGULAR;
+    textNode.characters = fullText;
+    textNode.fontSize = 13;
+    textNode.lineHeight = { value: 18, unit: "PIXELS" };
+    textNode.fills = [{ type: "SOLID", color: COLORS.messageText }];
+    textNode.setRangeFontName(0, comment.author.length, BOLD);
+    frame.appendChild(textNode);
+    textNode.layoutSizingHorizontal = "FILL";
+    textNode.textAutoResize = "HEIGHT";
     return frame;
   }
   function addMetaLabel(frame, text) {

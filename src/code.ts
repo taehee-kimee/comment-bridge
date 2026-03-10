@@ -8,6 +8,7 @@ import type {
   ExportPayload,
   PluginMessage,
   UIMessage,
+  NodePosition,
 } from "./types";
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -20,6 +21,9 @@ const GROUP_FRAME_NAME = "🗒 Imported Comments (MVP)";
 const UNPLACED_SECTION_NAME = "📌 Unplaced";
 const TOKEN_STORAGE_KEY = "figmaToken";
 const EXPORT_DATA_KEY = "savedExport";
+
+// In-memory cache: originalCommentId → Figma node ID (for fast navigate)
+const commentNodeMap = new Map<string, string>();
 
 const COLORS = {
   bg: { r: 1, g: 0.96, b: 0.75 },
@@ -41,34 +45,45 @@ figma.showUI(__html__, { width: 440, height: 560, themeColors: true });
 
 // Send init data to UI
 (async () => {
-  const [savedToken, savedExport] = await Promise.all([
-    figma.clientStorage.getAsync(TOKEN_STORAGE_KEY),
-    figma.clientStorage.getAsync(EXPORT_DATA_KEY),
-  ]);
-  sendToUI({
-    type: "init",
-    fileKey: figma.fileKey,
-    savedToken: String(savedToken ?? ""),
-    savedExport: (savedExport as string) ?? null,
-  });
+  try {
+    const [savedToken, savedExport] = await Promise.all([
+      figma.clientStorage.getAsync(TOKEN_STORAGE_KEY),
+      figma.clientStorage.getAsync(EXPORT_DATA_KEY),
+    ]);
+    const savedFileKey = figma.root.getPluginData("fileKey") || undefined;
+    const detectedFileKey = savedFileKey ?? figma.fileKey ?? undefined;
+    console.log("[Comment Bridge] init OK | fileKey:", detectedFileKey, "| hasToken:", !!savedToken, "| hasExport:", !!savedExport);
+    sendToUI({
+      type: "init",
+      fileKey: detectedFileKey,
+      savedToken: String(savedToken ?? ""),
+      savedExport: (savedExport as string) ?? null,
+    });
+  } catch (e) {
+    console.error("[Comment Bridge] INIT ERROR:", e);
+    figma.notify("Init error: " + String(e), { error: true });
+  }
 })();
 
 figma.ui.onmessage = async (msg: PluginMessage) => {
+  try {
   switch (msg.type) {
     case "import-comments":
       try {
         await importComments(msg.payload);
       } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message + " | stack: " + e.stack : String(e);
+        console.error("[Comment Bridge] IMPORT ERROR:", errMsg);
         sendToUI({
           type: "import-error",
-          error: e instanceof Error ? e.message : String(e),
+          error: errMsg,
         });
       }
       break;
 
     case "process-export":
       try {
-        const result = processExport(msg.rawComments, msg.includeResolved);
+        const result = processExport(msg.rawComments, msg.includeResolved, msg.nodePositions);
         const filename = `figma-comments-export-${todayStr()}.json`;
         sendToUI({
           type: "export-ready",
@@ -90,8 +105,12 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
     case "request-filekey":
       sendToUI({
         type: "filekey-response",
-        fileKey: figma.fileKey,
+        fileKey: (figma.fileKey ?? figma.root.getPluginData("fileKey")) || undefined,
       });
+      break;
+
+    case "save-filekey":
+      figma.root.setPluginData("fileKey", msg.fileKey);
       break;
 
     case "save-export":
@@ -101,9 +120,50 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
     case "load-export": {
       const saved = (await figma.clientStorage.getAsync(EXPORT_DATA_KEY)) ?? null;
-      sendToUI({ type: "export-load-result", json: saved as string | null });
+      sendToUI({ type: "export-load-result", json: saved as string | null, manual: !!msg.manual });
       break;
     }
+
+    case "navigate-to-comment": {
+      console.log("[Comment Bridge] navigate-to-comment:", msg.commentId, "| map size:", commentNodeMap.size);
+      let targetNode: BaseNode | null = null;
+
+      // Fast path: in-memory cache
+      const cachedNodeId = commentNodeMap.get(msg.commentId);
+      if (cachedNodeId) {
+        targetNode = figma.getNodeById(cachedNodeId);
+        console.log("[Comment Bridge] cache hit:", cachedNodeId, "| found:", !!targetNode);
+      }
+
+      // Slow fallback: search all pages
+      if (!targetNode) {
+        console.log("[Comment Bridge] cache miss, searching all pages…");
+        for (const page of figma.root.children) {
+          const found = page.findOne(
+            (n) => n.getPluginData("originalCommentId") === msg.commentId
+          );
+          if (found) {
+            targetNode = found;
+            commentNodeMap.set(msg.commentId, found.id);
+            break;
+          }
+        }
+      }
+
+      if (targetNode) {
+        const page = findPage(targetNode);
+        if (page) figma.currentPage = page;
+        figma.currentPage.selection = [targetNode as SceneNode];
+        figma.viewport.scrollAndZoomIntoView([targetNode as SceneNode]);
+      } else {
+        figma.notify("해당 코멘트를 찾을 수 없습니다. 먼저 Import를 실행해주세요.", { error: true });
+      }
+      break;
+    }
+  }
+  } catch (e) {
+    console.error("[Comment Bridge] MSG ERROR:", e);
+    figma.notify("Error: " + String(e), { error: true });
   }
 };
 
@@ -116,81 +176,121 @@ function sendToUI(msg: UIMessage) {
 // ══════════════════════════════════════════════════════════════════════
 
 async function importComments(payload: ImportPayload): Promise<void> {
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-  await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
+  await Promise.all([
+    figma.loadFontAsync({ family: "Inter", style: "Regular" }),
+    figma.loadFontAsync({ family: "Inter", style: "Semi Bold" }),
+  ]);
+
+  // 1. 페이지 이름 → PageNode 매핑
+  const pageMap = new Map<string, PageNode>();
+  for (const page of figma.root.children) {
+    pageMap.set(page.name, page);
+  }
+
+  // 2. 코멘트를 pageName별로 그룹화
+  const commentsByPage = new Map<string, ImportComment[]>();
+  for (const comment of payload.comments) {
+    const page = comment.pageName || "";
+    const arr = commentsByPage.get(page) ?? [];
+    arr.push(comment);
+    commentsByPage.set(page, arr);
+  }
 
   const results: CommentResult[] = [];
-  const placedNodes: { node: FrameNode; x: number; y: number }[] = [];
-  const unplacedNodes: FrameNode[] = [];
+  let lastGroup: FrameNode | null = null;
+  let lastPage: PageNode | null = null;
 
-  for (const comment of payload.comments) {
-    const fail = validateImportComment(comment);
-    if (fail) {
-      results.push({
-        originalCommentId: comment.originalCommentId ?? "unknown",
-        status: "failed",
-        reason: fail,
-      });
-      console.error(
-        `[Comment Bridge] SKIP ${comment.originalCommentId}: ${fail}`
-      );
-      continue;
+  // 3. 각 페이지별로 처리
+  const pageEntries = [...commentsByPage.entries()];
+  const totalPages = pageEntries.length;
+  let pageIdx = 0;
+
+  for (const [pageName, comments] of pageEntries) {
+    pageIdx++;
+    sendToUI({ type: "import-progress", current: pageIdx, total: totalPages, pageName: pageName || "unknown" });
+
+    const targetPage = pageMap.get(pageName) ?? figma.currentPage;
+    const needsFrameIndex = comments.some((c) => c.frameName && c.frameName.length > 0);
+    const frameIndex = needsFrameIndex ? buildFrameIndex(targetPage) : new Map<string, SceneNode[]>();
+
+    const placedNodes: { node: FrameNode; x: number; y: number }[] = [];
+    const unplacedNodes: FrameNode[] = [];
+
+    for (const comment of comments) {
+      const fail = validateImportComment(comment);
+      if (fail) {
+        results.push({
+          originalCommentId: comment.originalCommentId ?? "unknown",
+          status: "failed",
+          reason: fail,
+        });
+        continue;
+      }
+
+      const placement = resolveImportPosition(comment, frameIndex);
+      const postIt = createPostIt(comment);
+
+      postIt.setPluginData("originalCommentId", comment.originalCommentId);
+      commentNodeMap.set(comment.originalCommentId, postIt.id);
+      if (payload.exportSessionId) {
+        postIt.setPluginData("exportSessionId", payload.exportSessionId);
+      }
+      if (payload.source?.branchName) {
+        postIt.setPluginData("branchName", payload.source.branchName);
+      }
+
+      if (placement) {
+        placedNodes.push({ node: postIt, x: placement.x, y: placement.y });
+        results.push({
+          originalCommentId: comment.originalCommentId,
+          status: "placed",
+        });
+      } else {
+        addMetaLabel(postIt, `frameName: ${comment.frameName}`);
+        unplacedNodes.push(postIt);
+        results.push({
+          originalCommentId: comment.originalCommentId,
+          status: "unplaced",
+          reason: `Frame "${comment.frameName}" not found`,
+        });
+      }
     }
 
-    const placement = resolveImportPosition(comment);
-    const postIt = createPostIt(comment);
-
-    postIt.setPluginData("originalCommentId", comment.originalCommentId);
-    if (payload.exportSessionId) {
-      postIt.setPluginData("exportSessionId", payload.exportSessionId);
-    }
-    if (payload.source?.branchName) {
-      postIt.setPluginData("branchName", payload.source.branchName);
+    applyStacking(placedNodes);
+    for (const { node, x, y } of placedNodes) {
+      node.x = x;
+      node.y = y;
     }
 
-    if (placement) {
-      placedNodes.push({ node: postIt, x: placement.x, y: placement.y });
-      results.push({
-        originalCommentId: comment.originalCommentId,
-        status: "placed",
-      });
-    } else {
-      addMetaLabel(postIt, `frameName: ${comment.frameName}`);
-      unplacedNodes.push(postIt);
-      results.push({
-        originalCommentId: comment.originalCommentId,
-        status: "unplaced",
-        reason: `Frame "${comment.frameName}" not found`,
-      });
+    const allNodes = [
+      ...placedNodes.map((p) => p.node),
+      ...unplacedNodes,
+    ];
+
+    if (allNodes.length > 0) {
+      const group = createGroupFrame();
+      group.name = `${GROUP_FRAME_NAME} (${pageName || "unknown page"})`;
+
+      if (unplacedNodes.length > 0) {
+        const section = createUnplacedSection(unplacedNodes);
+        group.appendChild(section);
+      }
+
+      for (const { node } of placedNodes) {
+        group.appendChild(node);
+      }
+
+      targetPage.appendChild(group);
+      lastGroup = group;
+      lastPage = targetPage;
     }
   }
 
-  applyStacking(placedNodes);
-  for (const { node, x, y } of placedNodes) {
-    node.x = x;
-    node.y = y;
-  }
-
-  const allNodes = [
-    ...placedNodes.map((p) => p.node),
-    ...unplacedNodes,
-  ];
-
-  if (allNodes.length > 0) {
-    const group = createGroupFrame();
-
-    if (unplacedNodes.length > 0) {
-      const section = createUnplacedSection(unplacedNodes);
-      group.appendChild(section);
-    }
-
-    for (const { node } of placedNodes) {
-      group.appendChild(node);
-    }
-
-    figma.currentPage.appendChild(group);
-    figma.currentPage.selection = [group];
-    figma.viewport.scrollAndZoomIntoView([group]);
+  // 마지막 페이지로 이동 + 선택
+  if (lastGroup && lastPage) {
+    figma.currentPage = lastPage;
+    figma.currentPage.selection = [lastGroup];
+    figma.viewport.scrollAndZoomIntoView([lastGroup]);
   }
 
   const placed = results.filter((r) => r.status === "placed").length;
@@ -201,6 +301,19 @@ async function importComments(payload: ImportPayload): Promise<void> {
     `Imported: ${placed} placed, ${unplaced} unplaced, ${failed} failed`
   );
   sendToUI({ type: "import-complete", placed, unplaced, failed, results });
+}
+
+function buildFrameIndex(page: PageNode): Map<string, SceneNode[]> {
+  const frameIndex = new Map<string, SceneNode[]>();
+  const allFrames = page.findAllWithCriteria({
+    types: ["FRAME", "COMPONENT", "SECTION"],
+  });
+  for (const n of allFrames) {
+    const arr = frameIndex.get(n.name) ?? [];
+    arr.push(n);
+    frameIndex.set(n.name, arr);
+  }
+  return frameIndex;
 }
 
 // ── Import validation ────────────────────────────────────────────────
@@ -223,9 +336,10 @@ function validateImportComment(c: ImportComment): string | null {
 // ── Import position resolution ───────────────────────────────────────
 
 function resolveImportPosition(
-  comment: ImportComment
+  comment: ImportComment,
+  frameIndex: Map<string, SceneNode[]>
 ): { x: number; y: number } | null {
-  const targetFrame = findFrameByName(comment.frameName);
+  const targetFrame = findFrameByName(comment.frameName, frameIndex);
 
   if (!targetFrame) {
     if (comment.absoluteX !== undefined && comment.absoluteY !== undefined) {
@@ -256,14 +370,8 @@ function resolveImportPosition(
   return { x, y };
 }
 
-function findFrameByName(name: string): SceneNode | null {
-  const matches = figma.currentPage.findAll(
-    (n) =>
-      n.name === name &&
-      (n.type === "FRAME" ||
-        n.type === "COMPONENT" ||
-        n.type === "SECTION")
-  );
+function findFrameByName(name: string, frameIndex: Map<string, SceneNode[]>): SceneNode | null {
+  const matches = frameIndex.get(name) ?? [];
 
   if (matches.length === 0) return null;
   if (matches.length === 1) return matches[0];
@@ -314,17 +422,25 @@ function applyStacking(
 
 function processExport(
   rawComments: FigmaAPIComment[],
-  includeResolved: boolean
+  includeResolved: boolean,
+  nodePositions: Record<string, NodePosition>
 ): ExportPayload {
   // 1. Filter resolved
   const filtered = includeResolved
     ? rawComments
     : rawComments.filter((c) => !c.resolved_at);
 
+  console.log("[Comment Bridge] processExport: raw=" + rawComments.length + " filtered=" + filtered.length + " includeResolved=" + includeResolved);
+  if (filtered.length > 0) {
+    console.log("[Comment Bridge] sample comment keys:", JSON.stringify(Object.keys(filtered[0])));
+    console.log("[Comment Bridge] sample parent_id:", JSON.stringify(filtered[0].parent_id), "resolved_at:", JSON.stringify(filtered[0].resolved_at));
+  }
+
   // 2. Separate top-level comments and replies
   const topLevel = filtered.filter(
     (c) => !c.parent_id || c.parent_id === ""
   );
+  console.log("[Comment Bridge] topLevel=" + topLevel.length);
   const repliesMap = new Map<string, FigmaAPIComment[]>();
   for (const c of filtered) {
     if (c.parent_id && c.parent_id !== "") {
@@ -337,7 +453,7 @@ function processExport(
   // 3. Resolve each top-level comment
   const comments: ExportComment[] = [];
   for (const c of topLevel) {
-    const pos = resolveExportPosition(c.client_meta);
+    const pos = resolveExportPosition(c.client_meta, nodePositions);
     const thread = (repliesMap.get(c.id) ?? []).map((r) => ({
       author: r.user.handle,
       message: r.message,
@@ -379,10 +495,13 @@ interface ExportPosition {
   absoluteY: number;
 }
 
-function resolveExportPosition(meta: FigmaClientMeta): ExportPosition {
+function resolveExportPosition(
+  meta: FigmaClientMeta,
+  nodePositions: Record<string, NodePosition>
+): ExportPosition {
   if (meta.node_id) {
+    // 1. Try Plugin API (works when plugin runs in the same file)
     const node = figma.getNodeById(meta.node_id);
-
     if (node && "absoluteTransform" in node) {
       const sceneNode = node as SceneNode;
       const commentX =
@@ -411,7 +530,6 @@ function resolveExportPosition(meta: FigmaClientMeta): ExportPosition {
         };
       }
 
-      // Node found, but no parent frame — use pageName + absolute
       return {
         pageName: page?.name ?? "",
         frameName: "",
@@ -420,9 +538,29 @@ function resolveExportPosition(meta: FigmaClientMeta): ExportPosition {
         absoluteY: Math.round(commentY),
       };
     }
+
+    // 2. Fallback: use pre-resolved positions from REST API
+    const apiPos = nodePositions[meta.node_id];
+    if (apiPos) {
+      const commentX = apiPos.absX + (meta.node_offset?.x ?? 0);
+      const commentY = apiPos.absY + (meta.node_offset?.y ?? 0);
+      return {
+        pageName: apiPos.pageName,
+        frameName: apiPos.frameName,
+        nodeId: meta.node_id,
+        relativeX: apiPos.width > 0
+          ? (meta.node_offset?.x ?? 0) / apiPos.width
+          : undefined,
+        relativeY: apiPos.height > 0
+          ? (meta.node_offset?.y ?? 0) / apiPos.height
+          : undefined,
+        absoluteX: Math.round(commentX),
+        absoluteY: Math.round(commentY),
+      };
+    }
   }
 
-  // No node_id or node not found — absolute only
+  // 3. Final fallback: absolute coordinates from comment itself
   return {
     pageName: "",
     frameName: "",
@@ -456,6 +594,9 @@ function findPage(node: BaseNode): PageNode | null {
 // ══════════════════════════════════════════════════════════════════════
 
 function createPostIt(comment: ImportComment): FrameNode {
+  const BOLD = { family: "Inter", style: "Semi Bold" } as FontName;
+  const REGULAR = { family: "Inter", style: "Regular" } as FontName;
+
   const frame = figma.createFrame();
   const label =
     comment.message.length > 30
@@ -471,79 +612,33 @@ function createPostIt(comment: ImportComment): FrameNode {
   frame.paddingRight = 14;
   frame.paddingTop = 12;
   frame.paddingBottom = 12;
-  frame.itemSpacing = 8;
   frame.cornerRadius = 6;
   frame.fills = [{ type: "SOLID", color: COLORS.bg }];
-  frame.effects = [
-    {
-      type: "DROP_SHADOW",
-      color: COLORS.shadow,
-      offset: { x: 0, y: 2 },
-      radius: 8,
-      spread: 0,
-      visible: true,
-      blendMode: "NORMAL",
-    },
-  ];
+  frame.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.8, b: 0.6 } }];
+  frame.strokeWeight = 1;
 
-  // Header: Author
-  const authorText = figma.createText();
-  authorText.fontName = { family: "Inter", style: "Semi Bold" };
-  authorText.characters = comment.author;
-  authorText.fontSize = 12;
-  authorText.fills = [{ type: "SOLID", color: COLORS.authorText }];
-  frame.appendChild(authorText);
-  authorText.layoutSizingHorizontal = "FILL";
-
-  // Body: Message
-  const messageText = figma.createText();
-  messageText.fontName = { family: "Inter", style: "Regular" };
-  messageText.characters = comment.message;
-  messageText.fontSize = 13;
-  messageText.lineHeight = { value: 18, unit: "PIXELS" };
-  messageText.fills = [{ type: "SOLID", color: COLORS.messageText }];
-  frame.appendChild(messageText);
-  messageText.layoutSizingHorizontal = "FILL";
-  messageText.textAutoResize = "HEIGHT";
-
-  // Thread
+  // Single text node for all content — minimizes node creation
+  let fullText = comment.author + "\n" + comment.message;
   if (comment.thread && comment.thread.length > 0) {
-    const sep = figma.createFrame();
-    sep.resize(POST_IT_WIDTH - 28, 1);
-    sep.fills = [{ type: "SOLID", color: COLORS.separator }];
-    frame.appendChild(sep);
-    sep.layoutSizingHorizontal = "FILL";
-
-    for (const reply of comment.thread) {
-      const replyContainer = figma.createFrame();
-      replyContainer.layoutMode = "VERTICAL";
-      replyContainer.primaryAxisSizingMode = "AUTO";
-      replyContainer.counterAxisSizingMode = "AUTO";
-      replyContainer.itemSpacing = 2;
-      replyContainer.paddingLeft = 10;
-      replyContainer.fills = [];
-      frame.appendChild(replyContainer);
-      replyContainer.layoutSizingHorizontal = "FILL";
-
-      const replyAuthor = figma.createText();
-      replyAuthor.fontName = { family: "Inter", style: "Semi Bold" };
-      replyAuthor.characters = `↳ ${reply.author}`;
-      replyAuthor.fontSize = 11;
-      replyAuthor.fills = [{ type: "SOLID", color: COLORS.replyAuthor }];
-      replyContainer.appendChild(replyAuthor);
-      replyAuthor.layoutSizingHorizontal = "FILL";
-
-      const replyMsg = figma.createText();
-      replyMsg.fontName = { family: "Inter", style: "Regular" };
-      replyMsg.characters = reply.message;
-      replyMsg.fontSize = 12;
-      replyMsg.lineHeight = { value: 16, unit: "PIXELS" };
-      replyMsg.fills = [{ type: "SOLID", color: COLORS.replyText }];
-      replyContainer.appendChild(replyMsg);
-      replyMsg.layoutSizingHorizontal = "FILL";
-      replyMsg.textAutoResize = "HEIGHT";
-    }
+    const replyText = comment.thread
+      .map((r) => `↳ ${r.author}: ${r.message}`)
+      .join("\n");
+    fullText += "\n───\n" + replyText;
   }
+
+  const textNode = figma.createText();
+  textNode.fontName = REGULAR;
+  textNode.characters = fullText;
+  textNode.fontSize = 13;
+  textNode.lineHeight = { value: 18, unit: "PIXELS" };
+  textNode.fills = [{ type: "SOLID", color: COLORS.messageText }];
+
+  // Only 1 setRange call: author bold
+  textNode.setRangeFontName(0, comment.author.length, BOLD);
+
+  frame.appendChild(textNode);
+  textNode.layoutSizingHorizontal = "FILL";
+  textNode.textAutoResize = "HEIGHT";
 
   return frame;
 }

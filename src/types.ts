@@ -55,6 +55,16 @@ export interface FigmaClientMeta {
   y?: number;
 }
 
+/** Pre-resolved node position from REST API */
+export interface NodePosition {
+  absX: number;
+  absY: number;
+  width: number;
+  height: number;
+  pageName: string;
+  frameName: string;
+}
+
 export interface ExportComment {
   originalCommentId: string;
   author: string;
@@ -83,11 +93,13 @@ export interface ExportPayload {
 
 export type PluginMessage =
   | { type: "import-comments"; payload: ImportPayload }
-  | { type: "process-export"; rawComments: FigmaAPIComment[]; includeResolved: boolean }
+  | { type: "process-export"; rawComments: FigmaAPIComment[]; includeResolved: boolean; nodePositions: Record<string, NodePosition> }
+  | { type: "navigate-to-comment"; commentId: string }
   | { type: "save-token"; token: string }
   | { type: "request-filekey" }
   | { type: "save-export"; json: string }
-  | { type: "load-export" };
+  | { type: "load-export"; manual: boolean }
+  | { type: "save-filekey"; fileKey: string };
 
 // ── Messages: Plugin → UI ────────────────────────────────────────────
 
@@ -100,9 +112,10 @@ export type UIMessage =
       failed: number;
       results: CommentResult[];
     }
+  | { type: "import-progress"; current: number; total: number; pageName: string }
   | { type: "import-error"; error: string }
   | { type: "export-ready"; json: string; filename: string }
   | { type: "export-error"; error: string }
   | { type: "filekey-response"; fileKey: string | undefined }
   | { type: "export-saved" }
-  | { type: "export-load-result"; json: string | null };
+  | { type: "export-load-result"; json: string | null; manual: boolean };
